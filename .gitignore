@@ -1,0 +1,27 @@
+# Dependencies
+node_modules
+
+# Build
+dist
+dist-ssr
+
+# Env & secrets (never commit passwords, API keys)
+.env
+.env.*
+!.env.example
+
+# Logs & cache
+*.log
+npm-debug.log*
+.vite
+
+# OS & editor
+.DS_Store
+Thumbs.db
+*.local
+.idea
+.vscode/*
+!.vscode/tasks.json
+
+# PWA / tooling temp
+*.tsbuildinfo
