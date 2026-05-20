@@ -1,4 +1,4 @@
-export type UserRole = 'admin' | 'player'
+export type UserRole = 'super' | 'admin' | 'player'
 export type UserPosition = 'player' | 'goalie'
 
 export interface User {

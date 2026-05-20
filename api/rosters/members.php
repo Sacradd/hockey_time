@@ -15,7 +15,7 @@ if ($rosterId < 1) {
 }
 
 try {
-    api_require_user();
+    $viewer = api_require_user();
     $pdo = api_db();
 
     $r = $pdo->prepare('SELECT id, title, venue, weekday FROM rosters WHERE id = ? LIMIT 1');
@@ -36,14 +36,8 @@ try {
 
     $members = [];
     while ($row = $stmt->fetch()) {
-        $members[] = [
-            'user_id' => (int) $row['id'],
-            'name' => $row['display_login'] ?: api_format_phone_display($row['phone']),
-            'phone' => $row['phone'],
-            'role' => $row['role'],
-            'position' => $row['position'],
-            'is_active' => (bool) $row['is_active'],
-        ];
+        $row['user_id'] = (int) $row['id'];
+        $members[] = api_member_list_item($row, $viewer, $rosterId);
     }
 
     api_json_response([

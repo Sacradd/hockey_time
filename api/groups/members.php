@@ -15,15 +15,18 @@ if ($groupId < 1) {
 }
 
 try {
-    api_require_user();
     $pdo = api_db();
 
-    $g = $pdo->prepare('SELECT id, group_date, title FROM day_groups WHERE id = ? LIMIT 1');
+    $viewer = api_require_user();
+
+    $g = $pdo->prepare('SELECT id, roster_id, group_date, title FROM day_groups WHERE id = ? LIMIT 1');
     $g->execute([$groupId]);
     $group = $g->fetch();
     if (!$group) {
         api_json_response(['ok' => false, 'error' => 'Группа не найдена'], 404);
     }
+
+    $rosterId = (int) $group['roster_id'];
 
     $stmt = $pdo->prepare(
         'SELECT gm.actual, gm.is_guest, gm.excluded,
@@ -37,16 +40,7 @@ try {
 
     $members = [];
     while ($row = $stmt->fetch()) {
-        $members[] = [
-            'user_id' => (int) $row['user_id'],
-            'name' => $row['display_login'] ?: api_format_phone_display($row['phone']),
-            'phone' => $row['phone'],
-            'role' => $row['role'],
-            'position' => $row['position'] ?? 'player',
-            'actual' => (bool) $row['actual'],
-            'is_guest' => (bool) $row['is_guest'],
-            'excluded' => (bool) $row['excluded'],
-        ];
+        $members[] = api_member_list_item($row, $viewer, $rosterId);
     }
 
     api_json_response([

@@ -87,6 +87,17 @@ function db_link_roster_member(PDO $pdo, int $rosterId, int $userId): void
     $stmt->execute([$rosterId, $userId]);
 }
 
+function db_set_roster_admin(PDO $pdo, int $rosterId, int $userId, bool $isAdmin): void
+{
+    try {
+        $pdo->prepare(
+            'UPDATE roster_members SET is_admin = ? WHERE roster_id = ? AND user_id = ?'
+        )->execute([$isAdmin ? 1 : 0, $rosterId, $userId]);
+    } catch (Throwable $e) {
+        // колонка is_admin появится после миграции
+    }
+}
+
 function db_upsert_roster(PDO $pdo, string $title, ?string $venue, ?int $weekday): int
 {
     $stmt = $pdo->prepare('SELECT id FROM rosters WHERE title = ? LIMIT 1');

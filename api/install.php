@@ -28,6 +28,10 @@ try {
 
     $adminPhone = api_normalize_phone((string) ($seed['admin']['phone'] ?? ''));
     $adminPass = (string) ($seed['admin']['password'] ?? '');
+    $adminRole = (string) ($seed['admin']['role'] ?? 'super');
+    if (!in_array($adminRole, ['super', 'admin', 'player'], true)) {
+        $adminRole = 'super';
+    }
     $groupDate = (string) ($seed['group']['date'] ?? '');
     $groupTitle = isset($seed['group']['title']) ? (string) $seed['group']['title'] : null;
 
@@ -39,8 +43,9 @@ try {
     $pdo->beginTransaction();
 
     $rosterId = db_upsert_roster($pdo, $rosterTitle, $rosterVenue, $rosterWeekday);
-    $adminId = db_upsert_user($pdo, $adminPhone, $adminPass, 'admin', 'player', false, true);
+    $adminId = db_upsert_user($pdo, $adminPhone, $adminPass, $adminRole, 'player', false, true);
     db_link_roster_member($pdo, $rosterId, $adminId);
+    db_set_roster_admin($pdo, $rosterId, $adminId, $adminRole === 'super' || $adminRole === 'admin');
 
     $gameId = db_upsert_game($pdo, $rosterId, $groupDate, $groupTitle);
 

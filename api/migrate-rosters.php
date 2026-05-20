@@ -60,6 +60,32 @@ try {
         $steps[] = 'users.favorite_team added';
     }
 
+    try {
+        $pdo->exec(
+            "ALTER TABLE users MODIFY role ENUM('super','admin','player') NOT NULL DEFAULT 'player'"
+        );
+        $steps[] = 'users.role + super';
+    } catch (Throwable $e) {
+        // already has super
+    }
+
+    $superPhone = api_normalize_phone('79680227771');
+    $pdo->prepare("UPDATE users SET role = 'super' WHERE phone = ?")->execute([$superPhone]);
+    $steps[] = 'super role for owner phone';
+
+    if (!db_column_exists($pdo, 'roster_members', 'is_admin')) {
+        $pdo->exec('ALTER TABLE roster_members ADD COLUMN is_admin TINYINT(1) NOT NULL DEFAULT 0 AFTER user_id');
+        $steps[] = 'roster_members.is_admin added';
+    }
+
+    $pdo->exec(
+        "UPDATE roster_members rm
+         INNER JOIN users u ON u.id = rm.user_id
+         SET rm.is_admin = 1
+         WHERE u.role IN ('super', 'admin')"
+    );
+    $steps[] = 'roster_members.is_admin set for super/admin users';
+
     if (!db_column_exists($pdo, 'day_groups', 'roster_id')) {
         $pdo->exec('ALTER TABLE day_groups ADD COLUMN roster_id INT UNSIGNED NULL AFTER id');
         $steps[] = 'day_groups.roster_id added';
