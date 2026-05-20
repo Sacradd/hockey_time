@@ -9,7 +9,16 @@ export default defineConfig({
     VitePWA({
       devOptions: { enabled: false },
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'emblem.jpeg'],
+      includeAssets: [
+        'apple-touch-icon.png',
+        'icons/ios/icon-180.png',
+        'icons/ios/icon-167.png',
+        'icons/ios/icon-152.png',
+        'icons/ios/icon-120.png',
+        'icons/icon-192.png',
+        'icons/icon-512.png',
+        'icons/emblem-screen.png',
+      ],
       manifest: {
         name: 'Время хоккея',
         short_name: 'Хоккей',
@@ -21,16 +30,22 @@ export default defineConfig({
         start_url: '/',
         icons: [
           {
-            src: 'emblem.jpeg',
+            src: 'icons/icon-192.png',
             sizes: '192x192',
-            type: 'image/jpeg',
+            type: 'image/png',
             purpose: 'any',
           },
           {
-            src: 'emblem.jpeg',
+            src: 'icons/icon-512.png',
             sizes: '512x512',
-            type: 'image/jpeg',
-            purpose: 'any maskable',
+            type: 'image/png',
+            purpose: 'any',
+          },
+          {
+            src: 'icons/icon-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
           },
         ],
       },

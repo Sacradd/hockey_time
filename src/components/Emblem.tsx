@@ -1,5 +1,6 @@
 import './Emblem.css'
 
+/** Исходная эмблема — масштаб в CSS, чтобы круг заполнялся без смены картинки */
 const LOGO_SRC = '/emblem.jpeg'
 
 export function Emblem() {

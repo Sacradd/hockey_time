@@ -1,11 +1,13 @@
 .emblem {
-  --emblem-size: 160px;
+  --emblem-size: 200px;
   flex-shrink: 0;
   width: var(--emblem-size);
   height: var(--emblem-size);
   border-radius: var(--radius-full);
   overflow: hidden;
   box-shadow: var(--shadow-raised);
+  /* Прозрачные углы картинки → цвет сайта, не «шахматка» */
+  background: var(--color-bg);
 }
 
 .emblem__img {
@@ -14,6 +16,7 @@
   height: 100%;
   object-fit: cover;
   object-position: center;
-  /* Убираем прозрачную «рамку» вокруг логотипа в файле */
-  transform: scale(1.22);
+  background-color: #fff;
+  /* Увеличиваем emblem.jpeg, чтобы круглый логотип заполнил круг */
+  transform: scale(1.21);
 }

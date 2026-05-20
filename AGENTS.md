@@ -38,7 +38,9 @@ PWA (сайт как приложение на телефоне) для **сво
 
 - Референс UI: `black_orange.jpg`
 - Фон `#1E1E1E`, акцент `#FF6B00`, неоморфные тени в `src/styles/neumorphic.css`, токены в `tokens.css`
-- Логотип: `public/emblem.jpeg` — компонент `src/components/Emblem.tsx`, масштаб `scale(1.22)` в круге 160px
+- `public/emblem.jpeg` → экран входа (`icons/emblem-screen.png`)
+- **Иконка телефона:** `public/icons/ios/icon.jpeg` → `npm run icons`
+- **Экран входа:** `public/emblem.jpeg`, масштаб в `Emblem.css` (`transform: scale`)
 - На экране входа **нет** заголовка «Время хоккея» (убран по запросу) — только эмблема, логин, пароль, «Войти»
 - Мобильная ширина: `max-width: 430px` в `AppLayout`
 
