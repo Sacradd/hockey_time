@@ -11,7 +11,8 @@ export function login(phone: string, password: string) {
 export function activate(
   token: string,
   newPassword: string,
-  displayLogin: string
+  displayLogin: string,
+  favoriteTeam: string
 ) {
   return apiFetch<AuthResponse>('/auth/activate.php', {
     method: 'POST',
@@ -19,6 +20,7 @@ export function activate(
     body: JSON.stringify({
       new_password: newPassword,
       display_login: displayLogin,
+      favorite_team: favoriteTeam,
     }),
   })
 }

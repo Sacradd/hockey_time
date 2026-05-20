@@ -22,6 +22,15 @@
   --shadow-inset:
     inset 3px 3px 6px rgba(0, 0, 0, 0.4),
     inset -2px -2px 5px rgba(255, 255, 255, 0.03);
+  /* Верхние круги 44px: вариант B — кольцо + неоморф + блик */
+  --color-accent-ring: rgba(255, 107, 0, 0.32);
+  --color-accent-ring-hover: rgba(255, 107, 0, 0.52);
+  --shadow-top-icon:
+    var(--shadow-raised),
+    inset -1px -1px 2px rgba(255, 255, 255, 0.06);
+  --shadow-top-icon-hover:
+    var(--shadow-raised),
+    inset -1px -1px 3px rgba(255, 255, 255, 0.09);
 
   --radius-sm: 12px;
   --radius-md: 16px;

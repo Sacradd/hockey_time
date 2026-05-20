@@ -65,10 +65,11 @@ docs/SPEC.md           # бизнес-логика и этапы
 
 ## Бизнес-логика (кратко)
 
-1. **Группы по дням** — игровой день / слот.
-2. **Роли:** `admin`, `player` (по умолчанию).
-3. Админ создаёт аккаунт (телефон + пароль), игрок активируется после первого входа; в группе `actual = true`.
-4. **Голосование:** админ запускает → push всем → по времени голоса: **20 в игру**, остальные **резерв**.
+1. **Roster** — постоянный пул (Среда·Кристалл; позже Пятница·Ногинск). **Игра** — дата + голосование.
+2. **Доступ:** `users.role` = `admin` | `player`. **Состав:** `users.position` = `player` (лимит 20) | `goalie` (лимит 2, отдельный список).
+3. Админ создаёт аккаунты и добавляет в roster; первый вход — смена пароля и ник.
+4. **Голосование:** админ задаёт **подписи ответов** → push пулу → состав: 20 полевых + резерв + 2 вратаря.
+5. Подробная модель: [docs/ROSTERS-AND-VOTING.md](docs/ROSTERS-AND-VOTING.md).
 5. Админ может **удалить** из состава → пересчёт очереди.
 6. **Оплата:** админ запускает уведомления → игрок отмечает оплату → админ видит статусы, повторная рассылка.
 7. **Гости** и **ручная очередь** (вставка без очереди) — только админ.
@@ -78,10 +79,11 @@ docs/SPEC.md           # бизнес-логика и этапы
 | # | Этап | Статус |
 |---|------|--------|
 | 0 | PWA, дизайн, экран входа | ✅ сделано |
-| 1 | Авторизация, смена пароля, ник | ✅ (локально) |
-| 2 | Группы по дням, участники, `actual` | — |
-| 3 | Админ: создание игроков | — |
-| 4 | Голосование 20+резерв, push | — |
+| 1 | Авторизация, смена пароля, ник | ✅ |
+| 2 | Группы по дням, участники, `actual` | ✅ (локально) |
+| 3 | Roster, админ, position player/goalie | ✅ |
+| 3b | Миграция roster «Среда · Кристалл» | ✅ (`migrate-rosters.php`) |
+| 4 | Голосование (подписи ответов), 20+резерв+2 GK, push | — |
 | 5 | Удаление из состава | — |
 | 6 | Оплата | — |
 | 7 | Гости, очередь | — |
@@ -100,13 +102,15 @@ docs/SPEC.md           # бизнес-логика и этапы
 ## Схема БД (план, MySQL)
 
 ```
-users           — phone, password_hash, display_login, role, must_change_password
-day_groups      — date, vote_active, payment_active, ...
-group_members   — user_id, group_id, actual, queue_position, is_guest
-votes           — user_id, group_id, voted_at
+users           — phone, password_hash, display_login, role, position (player|goalie), ...
+rosters         — title, venue, weekday (Среда·Кристалл, …)
+roster_members  — roster_id, user_id
+day_groups      — roster_id, date, vote_label_1/2/3, vote_go_option, vote_active, ...
+votes           — user_id, group_id, choice (1|2|3), voted_at
 payments        — user_id, group_id, paid_at
 push_subscriptions — endpoint, keys, user_id
 ```
+(см. docs/ROSTERS-AND-VOTING.md; group_members/actual — этап миграции)
 
 ## Что уточнять у пользователя перед бэкендом
 

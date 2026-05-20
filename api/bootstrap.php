@@ -60,6 +60,14 @@ function api_db(): PDO
     return $pdo;
 }
 
+function api_format_phone_display(string $phone): string
+{
+    if (strlen($phone) === 11 && $phone[0] === '7') {
+        return '8' . substr($phone, 1);
+    }
+    return $phone;
+}
+
 function api_normalize_phone(string $phone): string
 {
     $digits = preg_replace('/\D+/', '', $phone) ?? '';

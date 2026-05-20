@@ -1,0 +1,38 @@
+.user-profile-bar {
+  position: absolute;
+  top: var(--space-lg);
+  left: var(--space-lg);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  max-width: calc(100% - 44px - var(--space-lg) * 2 - var(--space-md));
+  pointer-events: none;
+}
+
+.user-profile-bar .team-avatar {
+  border: 1px solid var(--color-accent-ring);
+  box-shadow: var(--shadow-top-icon);
+}
+
+.user-profile-bar__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.user-profile-bar__nick {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-profile-bar__role {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  text-transform: lowercase;
+}

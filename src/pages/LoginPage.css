@@ -34,6 +34,18 @@
   line-height: 1.4;
 }
 
+.login-page__hint--section {
+  margin-bottom: 0;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.login-page--activate {
+  justify-content: flex-start;
+  padding-top: var(--space-lg);
+  overflow-y: auto;
+}
+
 .login-page__error {
   color: var(--color-danger);
   font-size: var(--font-size-sm);

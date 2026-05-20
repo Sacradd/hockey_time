@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 require dirname(__DIR__) . '/bootstrap.php';
 require dirname(__DIR__) . '/lib/auth.php';
+require dirname(__DIR__) . '/lib/teams.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     api_json_response(['ok' => false, 'error' => 'Метод POST'], 405);
@@ -15,6 +16,7 @@ try {
 
     $newPassword = (string) ($body['new_password'] ?? '');
     $displayLogin = (string) ($body['display_login'] ?? '');
+    $favoriteTeam = (string) ($body['favorite_team'] ?? '');
 
     if ($newPassword === '' || mb_strlen($newPassword) < 4) {
         api_json_response(['ok' => false, 'error' => 'Пароль: минимум 4 символа'], 400);
@@ -25,6 +27,11 @@ try {
         api_json_response(['ok' => false, 'error' => $nickError], 400);
     }
 
+    $teamError = api_validate_favorite_team($favoriteTeam);
+    if ($teamError !== null) {
+        api_json_response(['ok' => false, 'error' => $teamError], 400);
+    }
+
     $pdo = api_db();
     $hash = password_hash($newPassword, PASSWORD_DEFAULT);
     $userId = (int) $user['id'];
@@ -32,11 +39,11 @@ try {
     $pdo->beginTransaction();
     try {
         $upd = $pdo->prepare(
-            'UPDATE users SET password_hash = ?, display_login = ?, must_change_password = 0, is_active = 1 WHERE id = ?'
+            'UPDATE users SET password_hash = ?, display_login = ?, favorite_team = ?, must_change_password = 0, is_active = 1 WHERE id = ?'
         );
-        $upd->execute([$hash, trim($displayLogin), $userId]);
+        $upd->execute([$hash, trim($displayLogin), $favoriteTeam, $userId]);
 
-        $pdo->prepare('UPDATE group_members SET actual = 1 WHERE user_id = ?')->execute([$userId]);
+        // Аккаунт активен; членство в roster уже при создании админом
 
         $pdo->commit();
     } catch (Throwable $e) {

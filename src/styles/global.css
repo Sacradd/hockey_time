@@ -31,6 +31,7 @@ body {
 }
 
 .app-shell {
+  position: relative;
   width: 100%;
   max-width: var(--app-max-width);
   min-height: 100%;
@@ -38,6 +39,10 @@ body {
     calc(var(--safe-top) + var(--space-md))
     var(--space-md)
     calc(var(--safe-bottom) + var(--space-md));
+}
+
+.app-shell--with-topbar {
+  padding-top: calc(var(--safe-top) + var(--space-lg) + 44px + var(--space-sm));
 }
 
 h1,

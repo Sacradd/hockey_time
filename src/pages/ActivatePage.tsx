@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { activate } from '@/api/auth'
 import { ApiError } from '@/api/http'
 import { Emblem } from '@/components/Emblem'
+import { TeamPicker } from '@/components/TeamPicker'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { useAuth } from '@/context/AuthContext'
@@ -11,6 +12,7 @@ import './LoginPage.css'
 export function ActivatePage() {
   const { token, setSession } = useAuth()
   const navigate = useNavigate()
+  const [favoriteTeam, setFavoriteTeam] = useState('')
   const [displayLogin, setDisplayLogin] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -20,6 +22,11 @@ export function ActivatePage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
+
+    if (!favoriteTeam) {
+      setError('Выберите команду КХЛ')
+      return
+    }
 
     if (newPassword !== confirm) {
       setError('Пароли не совпадают')
@@ -34,7 +41,7 @@ export function ActivatePage() {
 
     setSubmitting(true)
     try {
-      const res = await activate(token, newPassword, displayLogin)
+      const res = await activate(token, newPassword, displayLogin, favoriteTeam)
       if (res.ok && res.token && res.user) {
         setSession(res.token, res.user)
         navigate('/home', { replace: true })
@@ -49,10 +56,13 @@ export function ActivatePage() {
   }
 
   return (
-    <div className="login-page">
+    <div className="login-page login-page--activate">
       <Emblem />
 
-      <p className="login-page__hint">Первый вход: задайте свой пароль и ник</p>
+      <p className="login-page__hint">Первый вход: команда КХЛ, ник и новый пароль</p>
+
+      <p className="login-page__hint login-page__hint--section">Ваша команда</p>
+      <TeamPicker value={favoriteTeam} onChange={setFavoriteTeam} />
 
       <form className="login-page__form" onSubmit={handleSubmit}>
         <Input

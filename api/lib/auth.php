@@ -8,7 +8,7 @@ function api_token_secret(): string
     return (string) ($cfg['token_secret'] ?? $cfg['install_secret'] ?? 'dev-token-secret');
 }
 
-/** @return array{id:int,phone:string,display_login:?string,role:string,must_change_password:bool,is_active:bool} */
+/** @return array{id:int,phone:string,display_login:?string,favorite_team:?string,role:string,position:string,must_change_password:bool,is_active:bool} */
 function api_user_public(array $row): array
 {
     return [
@@ -17,10 +17,29 @@ function api_user_public(array $row): array
         'display_login' => isset($row['display_login']) && $row['display_login'] !== null
             ? (string) $row['display_login']
             : null,
+        'favorite_team' => isset($row['favorite_team']) && $row['favorite_team'] !== null
+            ? (string) $row['favorite_team']
+            : null,
         'role' => $row['role'],
+        'position' => $row['position'] ?? 'player',
         'must_change_password' => (bool) $row['must_change_password'],
         'is_active' => (bool) $row['is_active'],
     ];
+}
+
+/** @return array<string, mixed> */
+function api_require_admin(): array
+{
+    $user = api_require_user();
+    if ($user['role'] !== 'admin') {
+        api_json_response(['ok' => false, 'error' => 'Только для администратора'], 403);
+    }
+    return $user;
+}
+
+function api_validate_position(string $position): bool
+{
+    return in_array($position, ['player', 'goalie'], true);
 }
 
 function api_issue_token(int $userId): string
