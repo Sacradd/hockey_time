@@ -25,3 +25,18 @@
   width: 100%;
   margin-top: var(--space-sm);
 }
+
+.login-page__hint {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  text-align: center;
+  max-width: 320px;
+  line-height: 1.4;
+}
+
+.login-page__error {
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
+  text-align: center;
+  margin: 0;
+}

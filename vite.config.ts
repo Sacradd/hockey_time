@@ -56,4 +56,32 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  server: {
+    proxy: {
+      '/api': {
+        // Laragon: 127.0.0.1 + Host go_hockey.test (Node иногда не резолвит .test)
+        target: process.env.VITE_API_PROXY ?? 'http://127.0.0.1',
+        changeOrigin: true,
+        secure: false,
+        configure: (proxy) => {
+          const host = process.env.VITE_API_HOST ?? 'go_hockey.test'
+          proxy.on('proxyReq', (proxyReq) => {
+            proxyReq.setHeader('Host', host)
+          })
+          proxy.on('error', (err, _req, res) => {
+            console.error('[vite proxy /api]', err.message)
+            if ('writeHead' in res && typeof res.writeHead === 'function') {
+              res.writeHead(502, { 'Content-Type': 'application/json' })
+              res.end(
+                JSON.stringify({
+                  ok: false,
+                  error: `Прокси не достучался до Laragon (${host}). Start All в Laragon.`,
+                }),
+              )
+            }
+          })
+        },
+      },
+    },
+  },
 })

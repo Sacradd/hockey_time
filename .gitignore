@@ -9,6 +9,8 @@ dist-ssr
 .env
 .env.*
 !.env.example
+api/config.local.php
+database/seed.json
 
 # Logs & cache
 *.log

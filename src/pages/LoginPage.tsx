@@ -1,16 +1,43 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { login } from '@/api/auth'
+import { ApiError } from '@/api/http'
 import { Emblem } from '@/components/Emblem'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { useAuth } from '@/context/AuthContext'
 import './LoginPage.css'
 
 export function LoginPage() {
-  const [login, setLogin] = useState('')
+  const { setSession } = useAuth()
+  const navigate = useNavigate()
+  const [loginValue, setLoginValue] = useState('')
   const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    console.log('login', { login, password })
+    setError('')
+    setSubmitting(true)
+
+    try {
+      const res = await login(loginValue.trim(), password)
+      if (res.ok && res.token && res.user) {
+        setSession(res.token, res.user)
+        if (res.user.must_change_password) {
+          navigate('/activate', { replace: true })
+        } else {
+          navigate('/home', { replace: true })
+        }
+      } else {
+        setError(res.error ?? 'Не удалось войти')
+      }
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Ошибка сети. Проверьте Laragon и npm run dev')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -20,12 +47,13 @@ export function LoginPage() {
       <form className="login-page__form" onSubmit={handleSubmit}>
         <Input
           id="login"
-          type="text"
+          type="tel"
+          inputMode="tel"
           autoComplete="username"
-          placeholder="Логин"
-          aria-label="Логин"
-          value={login}
-          onChange={(e) => setLogin(e.target.value)}
+          placeholder="Телефон"
+          aria-label="Телефон"
+          value={loginValue}
+          onChange={(e) => setLoginValue(e.target.value)}
         />
 
         <Input
@@ -38,8 +66,15 @@ export function LoginPage() {
           onChange={(e) => setPassword(e.target.value)}
         />
 
-        <Button variant="accent" type="submit" className="login-page__submit">
-          Войти
+        {error && <p className="login-page__error">{error}</p>}
+
+        <Button
+          variant="accent"
+          type="submit"
+          className="login-page__submit"
+          disabled={submitting}
+        >
+          {submitting ? 'Вход…' : 'Войти'}
         </Button>
       </form>
     </div>

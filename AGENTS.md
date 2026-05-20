@@ -19,6 +19,8 @@ PWA (сайт как приложение на телефоне) для **сво
 | GitHub | https://github.com/Sacradd/hockey_time |
 | Локальная папка | `go_hockey` |
 | Запуск dev | `npm.cmd run dev` → http://localhost:5173/ |
+| С телефона (LAN) | Laragon **Start All**, затем `start_online.cmd` или `npm.cmd run dev:lan` → `http://IP-ПК:5173/` |
+| Локальный API + MySQL | Docker: см. [docs/LOCAL.md](docs/LOCAL.md) (`docker compose up -d`, `npm.cmd run local:install`) |
 | Сборка | `npm.cmd run build` → папка `dist/` |
 | Деплой | reg.ru: залить `dist/`; API позже PHP + MySQL на том же хостинге |
 
@@ -76,7 +78,7 @@ docs/SPEC.md           # бизнес-логика и этапы
 | # | Этап | Статус |
 |---|------|--------|
 | 0 | PWA, дизайн, экран входа | ✅ сделано |
-| 1 | Авторизация, смена пароля, ник | ⏳ следующий |
+| 1 | Авторизация, смена пароля, ник | ✅ (локально) |
 | 2 | Группы по дням, участники, `actual` | — |
 | 3 | Админ: создание игроков | — |
 | 4 | Голосование 20+резерв, push | — |
