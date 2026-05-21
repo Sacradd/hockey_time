@@ -86,6 +86,25 @@ try {
     );
     $steps[] = 'roster_members.is_admin set for super/admin users';
 
+    if (!db_column_exists($pdo, 'roster_members', 'position')) {
+        $pdo->exec(
+            "ALTER TABLE roster_members ADD COLUMN position ENUM('player','goalie') NOT NULL DEFAULT 'player' AFTER is_admin"
+        );
+        $pdo->exec(
+            'UPDATE roster_members rm
+             INNER JOIN users u ON u.id = rm.user_id
+             SET rm.position = u.position'
+        );
+        $steps[] = 'roster_members.position added';
+    }
+
+    try {
+        $pdo->exec('ALTER TABLE users ADD UNIQUE KEY uk_users_display_login (display_login)');
+        $steps[] = 'users.display_login unique';
+    } catch (Throwable $e) {
+        // duplicates or exists
+    }
+
     if (!db_column_exists($pdo, 'day_groups', 'roster_id')) {
         $pdo->exec('ALTER TABLE day_groups ADD COLUMN roster_id INT UNSIGNED NULL AFTER id');
         $steps[] = 'day_groups.roster_id added';

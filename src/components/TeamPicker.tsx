@@ -5,11 +5,16 @@ import './TeamPicker.css'
 interface TeamPickerProps {
   value: string
   onChange: (slug: string) => void
+  compact?: boolean
 }
 
-export function TeamPicker({ value, onChange }: TeamPickerProps) {
+export function TeamPicker({ value, onChange, compact = false }: TeamPickerProps) {
   return (
-    <div className="team-picker" role="listbox" aria-label="Команда КХЛ">
+    <div
+      className={`team-picker${compact ? ' team-picker--compact' : ''}`}
+      role="listbox"
+      aria-label="Команда КХЛ"
+    >
       {KHL_TEAMS.map((team) => {
         const selected = value === team.slug
         return (
@@ -22,7 +27,7 @@ export function TeamPicker({ value, onChange }: TeamPickerProps) {
             title={team.name}
             onClick={() => onChange(team.slug)}
           >
-            <TeamAvatar slug={team.slug} size={48} />
+            <TeamAvatar slug={team.slug} size={compact ? 36 : 48} />
             <span className="team-picker__name">{team.name}</span>
           </button>
         )

@@ -7,6 +7,8 @@ import { AdminAddPlayerPage } from '@/pages/AdminAddPlayerPage'
 import { GroupPage } from '@/pages/GroupPage'
 import { HomePage } from '@/pages/HomePage'
 import { LoginPage } from '@/pages/LoginPage'
+import { ProfilePage } from '@/pages/ProfilePage'
+import { ProfileRosterPage } from '@/pages/ProfileRosterPage'
 import { RosterPage } from '@/pages/RosterPage'
 
 export function App() {
@@ -43,6 +45,22 @@ export function App() {
             element={
               <RequireAuth>
                 <HomePage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <RequireAuth>
+                <ProfilePage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/profile/rosters/:id"
+            element={
+              <RequireAuth>
+                <ProfileRosterPage />
               </RequireAuth>
             }
           />

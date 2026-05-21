@@ -16,7 +16,8 @@ CREATE TABLE IF NOT EXISTS users (
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
-  UNIQUE KEY uk_users_phone (phone)
+  UNIQUE KEY uk_users_phone (phone),
+  UNIQUE KEY uk_users_display_login (display_login)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS rosters (
@@ -33,6 +34,7 @@ CREATE TABLE IF NOT EXISTS roster_members (
   roster_id INT UNSIGNED NOT NULL,
   user_id INT UNSIGNED NOT NULL,
   is_admin TINYINT(1) NOT NULL DEFAULT 0,
+  position ENUM('player', 'goalie') NOT NULL DEFAULT 'player',
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE KEY uk_roster_members (roster_id, user_id),

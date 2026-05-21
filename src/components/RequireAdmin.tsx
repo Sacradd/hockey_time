@@ -12,7 +12,7 @@ export function RequireAdmin({ children }: { children: React.ReactNode }) {
     )
   }
 
-  if (!user || user.role !== 'admin') {
+  if (!user || (user.role !== 'admin' && user.role !== 'super')) {
     return <Navigate to="/home" replace />
   }
 

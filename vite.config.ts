@@ -20,7 +20,7 @@ export default defineConfig({
         'icons/emblem-screen.png',
       ],
       manifest: {
-        name: 'Время хоккея',
+        name: 'Хоккей',
         short_name: 'Хоккей',
         description: 'Собираемся на хоккей',
         theme_color: '#1E1E1E',

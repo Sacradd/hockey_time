@@ -79,12 +79,59 @@ function db_upsert_user(
     return (int) $pdo->lastInsertId();
 }
 
-function db_link_roster_member(PDO $pdo, int $rosterId, int $userId): void
+function db_link_roster_member(PDO $pdo, int $rosterId, int $userId, string $position = 'player'): void
 {
+    if (!in_array($position, ['player', 'goalie'], true)) {
+        $position = 'player';
+    }
+
+    if (db_column_exists($pdo, 'roster_members', 'position')) {
+        $stmt = $pdo->prepare(
+            'INSERT INTO roster_members (roster_id, user_id, position)
+             VALUES (?, ?, ?)
+             ON DUPLICATE KEY UPDATE position = VALUES(position)'
+        );
+        $stmt->execute([$rosterId, $userId, $position]);
+        return;
+    }
+
     $stmt = $pdo->prepare(
         'INSERT IGNORE INTO roster_members (roster_id, user_id) VALUES (?, ?)'
     );
     $stmt->execute([$rosterId, $userId]);
+}
+
+function db_find_user_id_by_phone(PDO $pdo, string $phone): ?int
+{
+    $stmt = $pdo->prepare('SELECT id FROM users WHERE phone = ? LIMIT 1');
+    $stmt->execute([$phone]);
+    $id = $stmt->fetchColumn();
+    return $id !== false ? (int) $id : null;
+}
+
+/** @throws InvalidArgumentException */
+function db_create_player_user(PDO $pdo, string $phone, string $plainPassword): int
+{
+    if (db_find_user_id_by_phone($pdo, $phone) !== null) {
+        throw new InvalidArgumentException('Игрок с таким телефоном уже есть — добавьте из списка');
+    }
+
+    $hash = password_hash($plainPassword, PASSWORD_DEFAULT);
+    $ins = $pdo->prepare(
+        'INSERT INTO users (phone, password_hash, role, position, must_change_password, is_active)
+         VALUES (?, ?, ?, ?, 1, 0)'
+    );
+    $ins->execute([$phone, $hash, 'player', 'player']);
+    return (int) $pdo->lastInsertId();
+}
+
+function db_roster_has_member(PDO $pdo, int $rosterId, int $userId): bool
+{
+    $stmt = $pdo->prepare(
+        'SELECT 1 FROM roster_members WHERE roster_id = ? AND user_id = ? LIMIT 1'
+    );
+    $stmt->execute([$rosterId, $userId]);
+    return (bool) $stmt->fetchColumn();
 }
 
 function db_set_roster_admin(PDO $pdo, int $rosterId, int $userId, bool $isAdmin): void

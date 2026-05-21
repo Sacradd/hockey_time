@@ -9,7 +9,7 @@ export function Emblem() {
       <img
         className="emblem__img"
         src={LOGO_SRC}
-        alt="Время хоккея"
+        alt="Логотип"
         decoding="async"
       />
     </div>

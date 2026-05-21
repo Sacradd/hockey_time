@@ -39,5 +39,5 @@ export function getKhlTeam(slug: string | null | undefined): KhlTeam | null {
 }
 
 export function teamIconUrl(slug: string): string {
-  return `/teams/${slug}.svg`
+  return `/teams/${slug}.png`
 }

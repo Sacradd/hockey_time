@@ -16,22 +16,14 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 try {
     $body = api_read_json_body();
-    $phoneRaw = (string) ($body['phone'] ?? $body['login'] ?? '');
+    $loginRaw = trim((string) ($body['login'] ?? $body['phone'] ?? ''));
     $password = (string) ($body['password'] ?? '');
 
-    if ($phoneRaw === '' || $password === '') {
-        api_json_response(['ok' => false, 'error' => 'Введите телефон и пароль'], 400);
+    if ($loginRaw === '' || $password === '') {
+        api_json_response(['ok' => false, 'error' => 'Введите телефон или ник и пароль'], 400);
     }
 
-    try {
-        $phone = api_normalize_phone($phoneRaw);
-    } catch (InvalidArgumentException $e) {
-        api_json_response(['ok' => false, 'error' => $e->getMessage()], 400);
-    }
-
-    $stmt = api_db()->prepare('SELECT * FROM users WHERE phone = ? LIMIT 1');
-    $stmt->execute([$phone]);
-    $user = $stmt->fetch();
+    $user = api_find_user_by_login(api_db(), $loginRaw);
 
     if (!$user || !password_verify($password, (string) $user['password_hash'])) {
         api_json_response(['ok' => false, 'error' => 'Неверный логин или пароль'], 401);

@@ -27,6 +27,10 @@ try {
         api_json_response(['ok' => false, 'error' => $nickError], 400);
     }
 
+    if (api_display_login_taken($displayLogin, (int) $user['id'])) {
+        api_json_response(['ok' => false, 'error' => 'Этот ник уже занят'], 400);
+    }
+
     $teamError = api_validate_favorite_team($favoriteTeam);
     if ($teamError !== null) {
         api_json_response(['ok' => false, 'error' => $teamError], 400);

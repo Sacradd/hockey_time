@@ -47,11 +47,11 @@ export function LoginPage() {
       <form className="login-page__form" onSubmit={handleSubmit}>
         <Input
           id="login"
-          type="tel"
-          inputMode="tel"
+          type="text"
+          inputMode="text"
           autoComplete="username"
-          placeholder="Телефон"
-          aria-label="Телефон"
+          placeholder="Телефон или ник"
+          aria-label="Телефон или ник"
           value={loginValue}
           onChange={(e) => setLoginValue(e.target.value)}
         />

@@ -7,7 +7,15 @@
   align-items: center;
   gap: var(--space-sm);
   max-width: calc(100% - 44px - var(--space-lg) * 2 - var(--space-md));
-  pointer-events: none;
+  text-decoration: none;
+  color: inherit;
+  border-radius: var(--radius-md);
+  transition: opacity 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.user-profile-bar:hover {
+  opacity: 0.9;
 }
 
 .user-profile-bar .team-avatar {

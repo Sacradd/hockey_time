@@ -9,7 +9,7 @@ export function fetchRosters(token: string) {
 }
 
 export function fetchRosterMembers(token: string, rosterId: number) {
-  return apiFetch<{ ok: boolean; roster: Roster; members: RosterMember[] }>(
+  return apiFetch<{ ok: boolean; roster: Roster; members: RosterMember[]; can_manage: boolean }>(
     `/rosters/members.php?roster_id=${rosterId}`,
     { method: 'GET', token }
   )

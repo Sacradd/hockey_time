@@ -10,6 +10,8 @@ html,
 body,
 #root {
   height: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 body {
@@ -35,6 +37,7 @@ body {
   width: 100%;
   max-width: var(--app-max-width);
   min-height: 100%;
+  overflow-x: hidden;
   padding:
     calc(var(--safe-top) + var(--space-md))
     var(--space-md)

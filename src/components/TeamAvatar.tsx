@@ -11,6 +11,7 @@ interface TeamAvatarProps {
 
 export function TeamAvatar({ slug, size = 44, className = '', title }: TeamAvatarProps) {
   const team = getKhlTeam(slug)
+  const [useSvgFallback, setUseSvgFallback] = useState(false)
   const [imgFailed, setImgFailed] = useState(false)
 
   const style = { width: size, height: size }
@@ -30,6 +31,9 @@ export function TeamAvatar({ slug, size = 44, className = '', title }: TeamAvata
   }
 
   const showImg = !imgFailed
+  const imgSrc = useSvgFallback
+    ? `/teams/${team.slug}.svg`
+    : teamIconUrl(team.slug)
 
   return (
     <div
@@ -41,9 +45,12 @@ export function TeamAvatar({ slug, size = 44, className = '', title }: TeamAvata
       {showImg ? (
         <img
           className="team-avatar__img"
-          src={teamIconUrl(team.slug)}
+          src={imgSrc}
           alt=""
-          onError={() => setImgFailed(true)}
+          onError={() => {
+            if (!useSvgFallback) setUseSvgFallback(true)
+            else setImgFailed(true)
+          }}
         />
       ) : (
         <span

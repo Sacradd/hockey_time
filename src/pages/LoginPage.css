@@ -7,6 +7,10 @@
   min-height: 100%;
   gap: var(--space-lg);
   padding: var(--space-xl) 0;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 .login-page__form {
@@ -14,7 +18,7 @@
   flex-direction: column;
   gap: var(--space-md);
   width: 100%;
-  max-width: 320px;
+  max-width: min(320px, 100%);
 }
 
 .neo-field {
@@ -44,10 +48,18 @@
   justify-content: flex-start;
   padding-top: var(--space-lg);
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .login-page__error {
   color: var(--color-danger);
+  font-size: var(--font-size-sm);
+  text-align: center;
+  margin: 0;
+}
+
+.login-page__success {
+  color: var(--color-success);
   font-size: var(--font-size-sm);
   text-align: center;
   margin: 0;

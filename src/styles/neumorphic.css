@@ -29,6 +29,22 @@
   transition: box-shadow 0.15s ease, transform 0.1s ease;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
+  text-decoration: none;
+}
+
+a.neo-btn,
+a.neo-btn:hover,
+a.neo-btn:focus,
+a.neo-btn:visited {
+  text-decoration: none;
+  color: var(--color-text);
+}
+
+a.neo-btn--accent,
+a.neo-btn--accent:hover,
+a.neo-btn--accent:focus,
+a.neo-btn--accent:visited {
+  color: #fff;
 }
 
 .neo-btn:active:not(:disabled) {

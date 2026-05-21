@@ -84,6 +84,25 @@ function api_read_json_body(): array
     return is_array($data) ? $data : [];
 }
 
+function api_body_bool(array $body, string $key): bool
+{
+    if (!array_key_exists($key, $body)) {
+        return false;
+    }
+    $v = $body[$key];
+    if (is_bool($v)) {
+        return $v;
+    }
+    if (is_int($v)) {
+        return $v === 1;
+    }
+    if (is_string($v)) {
+        return in_array(strtolower($v), ['1', 'true', 'yes', 'on'], true);
+    }
+
+    return false;
+}
+
 function api_get_authorization_header(): string
 {
     $header = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
@@ -123,6 +142,17 @@ function api_is_super(array $user): bool
     return ($user['role'] ?? '') === 'super';
 }
 
+/** @return array<string, mixed> */
+function api_require_super(): array
+{
+    $user = api_require_user();
+    if (!api_is_super($user)) {
+        api_json_response(['ok' => false, 'error' => 'Только для super'], 403);
+    }
+
+    return $user;
+}
+
 /** Телефон другого участника: только super, админ группы (позже is_admin), или сам пользователь. */
 function api_can_view_member_phone(array $viewer, int $targetUserId, int $rosterId = 0): bool
 {
@@ -153,6 +183,30 @@ function api_is_roster_admin(int $userId, int $rosterId): bool
     } catch (Throwable $e) {
         return false;
     }
+}
+
+function api_can_manage_roster(array $user, int $rosterId): bool
+{
+    return api_is_super($user) || api_is_roster_admin((int) $user['id'], $rosterId);
+}
+
+/** @return array<string, mixed> */
+function api_require_roster_admin(int $rosterId): array
+{
+    $user = api_require_user();
+    if (!api_can_manage_roster($user, $rosterId)) {
+        api_json_response(['ok' => false, 'error' => 'Только админ этой группы'], 403);
+    }
+    return $user;
+}
+
+function api_display_login_taken(string $login, int $excludeUserId = 0): bool
+{
+    $stmt = api_db()->prepare(
+        'SELECT id FROM users WHERE LOWER(display_login) = LOWER(?) AND id != ? LIMIT 1'
+    );
+    $stmt->execute([trim($login), $excludeUserId]);
+    return (bool) $stmt->fetchColumn();
 }
 
 /** @return array<string, mixed> */
@@ -193,4 +247,86 @@ function api_validate_display_login(string $login): ?string
         return 'Ник: только буквы, цифры, _ - .';
     }
     return null;
+}
+
+/** Поиск пользователя по телефону или нику (display_login). */
+function api_find_user_by_login(PDO $pdo, string $loginRaw): ?array
+{
+    $loginRaw = trim($loginRaw);
+    if ($loginRaw === '') {
+        return null;
+    }
+
+    $digits = preg_replace('/\D+/', '', $loginRaw) ?? '';
+    if (strlen($digits) >= 10) {
+        try {
+            $phone = api_normalize_phone($loginRaw);
+            $stmt = $pdo->prepare('SELECT * FROM users WHERE phone = ? LIMIT 1');
+            $stmt->execute([$phone]);
+            $row = $stmt->fetch();
+            if ($row) {
+                return $row;
+            }
+        } catch (InvalidArgumentException) {
+            // не телефон — пробуем ник ниже
+        }
+    }
+
+    if (api_validate_display_login($loginRaw) === null) {
+        $stmt = $pdo->prepare(
+            'SELECT * FROM users WHERE LOWER(display_login) = LOWER(?) LIMIT 1'
+        );
+        $stmt->execute([$loginRaw]);
+        $row = $stmt->fetch();
+        if ($row) {
+            return $row;
+        }
+    }
+
+    return null;
+}
+
+function api_generate_temp_password(int $length = 8): string
+{
+    $chars = '23456789abcdefghjkmnpqrstuvwxyz';
+    $max = strlen($chars) - 1;
+    $out = '';
+    for ($i = 0; $i < $length; $i++) {
+        $out .= $chars[random_int(0, $max)];
+    }
+    return $out;
+}
+
+/** Сброс пароля: super — любой player; админ группы — участники своих roster. */
+function api_can_reset_user_password(array $viewer, int $targetUserId): bool
+{
+    if ($targetUserId < 1 || (int) $viewer['id'] === $targetUserId) {
+        return false;
+    }
+
+    $stmt = api_db()->prepare('SELECT role FROM users WHERE id = ? LIMIT 1');
+    $stmt->execute([$targetUserId]);
+    $targetRole = $stmt->fetchColumn();
+    if ($targetRole === false) {
+        return false;
+    }
+    if ($targetRole === 'super') {
+        return api_is_super($viewer);
+    }
+    if (api_is_super($viewer)) {
+        return true;
+    }
+
+    $chk = api_db()->prepare(
+        'SELECT 1 FROM roster_members rm_target
+         INNER JOIN roster_members rm_admin
+           ON rm_admin.roster_id = rm_target.roster_id
+          AND rm_admin.user_id = ?
+          AND rm_admin.is_admin = 1
+         WHERE rm_target.user_id = ?
+         LIMIT 1'
+    );
+    $chk->execute([(int) $viewer['id'], $targetUserId]);
+
+    return (bool) $chk->fetchColumn();
 }

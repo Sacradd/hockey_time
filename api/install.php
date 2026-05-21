@@ -61,7 +61,7 @@ try {
             $position = 'player';
         }
         $userId = db_upsert_user($pdo, $phone, $pass, 'player', $position, true, false);
-        db_link_roster_member($pdo, $rosterId, $userId);
+        db_link_roster_member($pdo, $rosterId, $userId, $position);
         link_game_member($pdo, $userId, $gameId, false);
         $playersCreated++;
     }

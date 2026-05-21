@@ -1,10 +1,10 @@
 import { apiFetch } from '@/api/http'
 import type { AuthResponse, User } from '@/types/auth'
 
-export function login(phone: string, password: string) {
+export function login(login: string, password: string) {
   return apiFetch<AuthResponse>('/auth/login.php', {
     method: 'POST',
-    body: JSON.stringify({ phone, password }),
+    body: JSON.stringify({ login, password }),
   })
 }
 

@@ -11,10 +11,10 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 try {
-    api_require_admin();
     $body = api_read_json_body();
 
     $rosterId = (int) ($body['roster_id'] ?? 0);
+    api_require_roster_admin($rosterId);
     $date = (string) ($body['date'] ?? $body['group_date'] ?? '');
     $title = isset($body['title']) ? (string) $body['title'] : null;
 
