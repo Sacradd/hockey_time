@@ -96,6 +96,7 @@ try {
         'ok' => true,
         'admin_rosters' => $adminRosters,
         'active_games' => $activeGames,
+        'can_create_roster' => api_can_create_roster($viewer),
     ]);
 } catch (Throwable $e) {
     api_handle_exception($e);

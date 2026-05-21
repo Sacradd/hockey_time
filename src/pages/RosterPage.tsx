@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { createGame } from '@/api/admin'
+import { createGame, removeMember } from '@/api/admin'
+import { MemberSwipeRow } from '@/components/MemberSwipeRow'
 import { fetchRosterGames, fetchRosterMembers } from '@/api/rosters'
 import { ApiError } from '@/api/http'
 import { Button } from '@/components/ui/Button'
@@ -15,7 +16,7 @@ import './Groups.css'
 export function RosterPage() {
   const { id } = useParams()
   const rosterId = Number(id)
-  const { token } = useAuth()
+  const { token, user } = useAuth()
   const navigate = useNavigate()
   const [canManage, setCanManage] = useState(false)
   const [showCreateGame, setShowCreateGame] = useState(false)
@@ -146,9 +147,14 @@ export function RosterPage() {
       </ul>
 
       <h2 className="groups-section-title">Участники пула</h2>
+      {canManage && (
+        <p className="groups-page__user" style={{ margin: '0 0 var(--space-sm)' }}>
+          Свайп влево — убрать из группы (аккаунт в общем списке остаётся)
+        </p>
+      )}
       <ul className="members-list">
-        {members.map((m) => (
-          <li key={m.user_id}>
+        {members.map((m) => {
+          const row = (
             <div className="neo-surface member-row">
               <div>
                 <div className="member-row__name">
@@ -170,8 +176,36 @@ export function RosterPage() {
                 {positionLabel(m.position)}
               </span>
             </div>
-          </li>
-        ))}
+          )
+
+          if (!canManage) {
+            return <li key={m.user_id}>{row}</li>
+          }
+
+          return (
+            <MemberSwipeRow
+              key={m.user_id}
+              disabled={m.user_id === user?.id}
+              onRemove={async () => {
+                if (!token) return
+                if (m.user_id === user?.id) {
+                  setError('Нельзя убрать себя из группы')
+                  return
+                }
+                if (!confirm(`Убрать «${m.name}» из группы?`)) return
+                setError('')
+                try {
+                  await removeMember(token, rosterId, m.user_id)
+                  setMembers((prev) => prev.filter((x) => x.user_id !== m.user_id))
+                } catch (err) {
+                  setError(err instanceof ApiError ? err.message : 'Не удалось убрать')
+                }
+              }}
+            >
+              {row}
+            </MemberSwipeRow>
+          )
+        })}
       </ul>
     </div>
   )

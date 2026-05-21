@@ -145,6 +145,14 @@ function db_set_roster_admin(PDO $pdo, int $rosterId, int $userId, bool $isAdmin
     }
 }
 
+function db_create_roster(PDO $pdo, string $title, ?string $venue, ?int $weekday): int
+{
+    $ins = $pdo->prepare('INSERT INTO rosters (title, venue, weekday) VALUES (?, ?, ?)');
+    $ins->execute([$title, $venue, $weekday]);
+
+    return (int) $pdo->lastInsertId();
+}
+
 function db_upsert_roster(PDO $pdo, string $title, ?string $venue, ?int $weekday): int
 {
     $stmt = $pdo->prepare('SELECT id FROM rosters WHERE title = ? LIMIT 1');

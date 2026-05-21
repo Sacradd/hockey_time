@@ -53,6 +53,7 @@ export interface ActiveGame extends GameSummary {
 export interface DashboardData {
   admin_rosters: Roster[]
   active_games: ActiveGame[]
+  can_create_roster?: boolean
 }
 
 export interface ProfileRosterSummary {

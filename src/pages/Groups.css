@@ -101,6 +101,42 @@ a.group-card:visited {
   padding: 0;
 }
 
+.member-swipe {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  list-style: none;
+}
+
+.member-swipe__actions {
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: 80px;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  background: rgba(248, 113, 113, 0.2);
+}
+
+.member-swipe__remove {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--color-danger);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0 var(--space-xs);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.member-swipe__panel {
+  position: relative;
+  z-index: 1;
+  transition: transform 0.15s ease;
+  touch-action: pan-y;
+}
+
 .member-row {
   display: flex;
   align-items: center;

@@ -1,6 +1,52 @@
 import { apiFetch } from '@/api/http'
 import type { User } from '@/types/auth'
-import type { GameSummary } from '@/types/groups'
+import type { GameSummary, Roster } from '@/types/groups'
+
+export function createUser(
+  token: string,
+  data: {
+    phone: string
+    password: string
+    is_group_admin?: boolean
+  }
+) {
+  return apiFetch<{
+    ok: boolean
+    user: User
+    phone_display: string
+    is_group_admin?: boolean
+  }>('/admin/create-user.php', {
+    method: 'POST',
+    token,
+    body: JSON.stringify({
+      phone: data.phone,
+      password: data.password,
+      is_group_admin: data.is_group_admin ?? false,
+    }),
+  })
+}
+
+export function createRoster(
+  token: string,
+  data: { title: string; venue?: string; weekday?: number | null }
+) {
+  return apiFetch<{ ok: boolean; roster: Roster }>('/admin/create-roster.php', {
+    method: 'POST',
+    token,
+    body: JSON.stringify(data),
+  })
+}
+
+export function removeMember(token: string, rosterId: number, userId: number) {
+  return apiFetch<{ ok: boolean; removed: boolean; name: string }>(
+    '/admin/remove-member.php',
+    {
+      method: 'POST',
+      token,
+      body: JSON.stringify({ roster_id: rosterId, user_id: userId }),
+    }
+  )
+}
 
 export function createPlayer(
   token: string,

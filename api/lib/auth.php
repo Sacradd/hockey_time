@@ -142,6 +142,12 @@ function api_is_super(array $user): bool
     return ($user['role'] ?? '') === 'super';
 }
 
+/** Создатель групп (super выдал role=admin без привязки к льду). */
+function api_can_create_roster(array $user): bool
+{
+    return ($user['role'] ?? '') === 'admin';
+}
+
 /** @return array<string, mixed> */
 function api_require_super(): array
 {

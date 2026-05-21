@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { RequireActivate, RequireAuth, RequireGuest } from '@/components/RequireAuth'
-import { RequireAdmin } from '@/components/RequireAdmin'
+import { RequireSuper } from '@/components/RequireSuper'
+import { AdminCreateUserPage } from '@/pages/AdminCreateUserPage'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { ActivatePage } from '@/pages/ActivatePage'
 import { AdminAddPlayerPage } from '@/pages/AdminAddPlayerPage'
@@ -76,9 +77,17 @@ export function App() {
             path="/rosters/:id/add-player"
             element={
               <RequireAuth>
-                <RequireAdmin>
-                  <AdminAddPlayerPage />
-                </RequireAdmin>
+                <AdminAddPlayerPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/admin/create-user"
+            element={
+              <RequireAuth>
+                <RequireSuper>
+                  <AdminCreateUserPage />
+                </RequireSuper>
               </RequireAuth>
             }
           />

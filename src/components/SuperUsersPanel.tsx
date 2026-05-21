@@ -11,7 +11,6 @@ import {
 import { ApiError } from '@/api/http'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import type { Roster } from '@/types/groups'
 import '@/pages/Groups.css'
 
 function buildCopyText(res: ResetPasswordResult): string {
@@ -34,7 +33,7 @@ function matchUser(u: SuperUserListItem, q: string): boolean {
   return false
 }
 
-export function SuperUsersPanel({ token, rosters }: { token: string; rosters: Roster[] }) {
+export function SuperUsersPanel({ token }: { token: string }) {
   const navigate = useNavigate()
   const [users, setUsers] = useState<SuperUserListItem[]>([])
   const [searchQ, setSearchQ] = useState('')
@@ -45,7 +44,6 @@ export function SuperUsersPanel({ token, rosters }: { token: string; rosters: Ro
   const [resetResult, setResetResult] = useState<ResetPasswordResult | null>(null)
   const [copied, setCopied] = useState(false)
   const [tempPassword, setTempPassword] = useState('')
-  const [pickRoster, setPickRoster] = useState(false)
 
   const load = useCallback(() => {
     setLoading(true)
@@ -106,15 +104,6 @@ export function SuperUsersPanel({ token, rosters }: { token: string; rosters: Ro
     }
   }
 
-  function handleAddPlayer() {
-    if (rosters.length === 0) return
-    if (rosters.length === 1) {
-      navigate(`/rosters/${rosters[0].id}/add-player`)
-      return
-    }
-    setPickRoster((open) => !open)
-  }
-
   return (
     <>
       <div className="groups-section-head">
@@ -122,33 +111,12 @@ export function SuperUsersPanel({ token, rosters }: { token: string; rosters: Ro
         <button
           type="button"
           className="super-add-player-btn"
-          aria-label="Добавить игрока"
-          disabled={rosters.length === 0}
-          onClick={handleAddPlayer}
+          aria-label="Добавить игрока в пул"
+          onClick={() => navigate('/admin/create-user')}
         >
           +
         </button>
       </div>
-
-      {pickRoster && rosters.length > 1 && (
-        <ul className="groups-list super-roster-pick">
-          {rosters.map((r) => (
-            <li key={r.id} className="groups-list__item">
-              <button
-                type="button"
-                className="neo-surface group-card"
-                onClick={() => {
-                  setPickRoster(false)
-                  navigate(`/rosters/${r.id}/add-player`)
-                }}
-              >
-                <span className="group-card__date">{r.title}</span>
-                {r.venue && <p className="group-card__meta">{r.venue}</p>}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
 
       <Input
         label="Поиск"
@@ -210,7 +178,7 @@ export function SuperUsersPanel({ token, rosters }: { token: string; rosters: Ro
           <h4 className="groups-section-title">Админ группы</h4>
           {selected.rosters.length === 0 ? (
             <p className="groups-page__empty">
-              Не в группах — добавьте через «Управление группами»
+              Не в группах — админ добавит из пула в свою группу
             </p>
           ) : (
             <ul className="super-user-panel__rosters">

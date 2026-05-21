@@ -85,7 +85,7 @@ docs/SPEC.md           # бизнес-логика и этапы
 | 3 | Roster, админ, position player/goalie | ✅ |
 | 3b | Миграция roster «Среда · Кристалл» | ✅ (`migrate-rosters.php`) |
 | 4 | Голосование (подписи ответов), 20+резерв+2 GK, push | ⏳ UI/API; push позже |
-| 4b | Пул + группы: super → пул, админ → группы | ⏳ см. docs/POOL-AND-GROUPS.md |
+| 4b | Пул + группы: super → пул, админ → группы | ✅ см. docs/POOL-AND-GROUPS.md |
 | 5 | Удаление из состава | — |
 | 6 | Оплата | — |
 | 7 | Гости, очередь | — |
