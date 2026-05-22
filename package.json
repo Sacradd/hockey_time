@@ -13,6 +13,7 @@
     "local:xampp": "powershell -ExecutionPolicy Bypass -File scripts/setup-xampp.ps1",
     "local:install": "powershell -ExecutionPolicy Bypass -File scripts/local-install.ps1",
     "local:migrate": "powershell -ExecutionPolicy Bypass -File scripts/local-migrate.ps1",
+    "local:super-dev": "powershell -ExecutionPolicy Bypass -File scripts/local-dev-super.ps1",
     "icons": "node scripts/generate-icons.mjs",
     "teams:slice": "node scripts/slice-khl-icons.mjs",
     "teams:import": "node scripts/import-khl-debug.mjs",

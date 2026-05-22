@@ -11,6 +11,11 @@
   --color-text-dim: #6b6b6b;
   --color-success: #4ade80;
   --color-danger: #f87171;
+  /* Серьёзное удаление: тёплый тёмный, в духе accent-dim, без «кислотного» красного */
+  --color-destructive-bg: #2a2420;
+  --color-destructive-border: rgba(204, 85, 0, 0.38);
+  --color-destructive-text: #c49a82;
+  --color-destructive-text-muted: #9a7d6c;
 
   /* Neumorphism */
   --shadow-raised:

@@ -1,0 +1,94 @@
+.app-confirm {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-lg);
+}
+
+.app-confirm__backdrop {
+  position: absolute;
+  inset: 0;
+  border: none;
+  padding: 0;
+  background: rgba(0, 0, 0, 0.55);
+  cursor: pointer;
+}
+
+.app-confirm__box {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 300px;
+  padding: var(--space-lg);
+  text-align: center;
+}
+
+.app-confirm__text {
+  margin: 0 0 var(--space-lg);
+  font-size: 1rem;
+  line-height: 1.45;
+  color: var(--color-text);
+}
+
+.app-confirm__actions {
+  display: flex;
+  gap: var(--space-md);
+  justify-content: center;
+}
+
+.app-confirm__actions .neo-btn.app-confirm__btn {
+  flex: 1;
+  max-width: 120px;
+}
+
+.app-confirm__actions .neo-btn.app-confirm__btn--yes {
+  background: var(--color-bg-elevated);
+  color: var(--color-text-muted);
+  box-shadow: var(--shadow-inset);
+}
+
+.app-confirm__actions .neo-btn.app-confirm__btn--yes:hover {
+  color: var(--color-text);
+}
+
+.app-confirm__actions .neo-btn.app-confirm__btn--yes:active {
+  box-shadow: var(--shadow-pressed);
+}
+
+.app-confirm__actions .neo-btn.app-confirm__btn--no {
+  background: var(--color-accent);
+  color: #fff;
+  font-weight: 600;
+  box-shadow:
+    var(--shadow-raised),
+    0 0 16px var(--color-accent-glow);
+}
+
+.app-confirm__actions .neo-btn.app-confirm__btn--no:hover {
+  background: #ff7a1a;
+}
+
+.app-confirm__actions .neo-btn.app-confirm__btn--no:active {
+  background: var(--color-accent-dim);
+  box-shadow: var(--shadow-pressed);
+}
+
+.app-confirm__actions .neo-btn.app-confirm__btn--no-danger {
+  background: var(--color-destructive-bg);
+  color: var(--color-destructive-text);
+  font-weight: 500;
+  border: 1px solid var(--color-destructive-border);
+  box-shadow: var(--shadow-inset);
+}
+
+.app-confirm__actions .neo-btn.app-confirm__btn--no-danger:hover {
+  color: var(--color-destructive-text-muted);
+  border-color: rgba(204, 85, 0, 0.52);
+}
+
+.app-confirm__actions .neo-btn.app-confirm__btn--no-danger:active {
+  box-shadow: var(--shadow-pressed);
+}

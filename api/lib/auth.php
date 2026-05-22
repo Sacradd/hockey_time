@@ -208,8 +208,13 @@ function api_require_roster_admin(int $rosterId): array
 
 function api_display_login_taken(string $login, int $excludeUserId = 0): bool
 {
+    require_once __DIR__ . '/db.php';
+
     $stmt = api_db()->prepare(
-        'SELECT id FROM users WHERE LOWER(display_login) = LOWER(?) AND id != ? LIMIT 1'
+        'SELECT u.id FROM users u
+         WHERE LOWER(u.display_login) = LOWER(?) AND u.id != ?
+           AND ' . db_sql_exclude_game_only_guests() . '
+         LIMIT 1'
     );
     $stmt->execute([trim($login), $excludeUserId]);
     return (bool) $stmt->fetchColumn();
@@ -219,11 +224,16 @@ function api_display_login_taken(string $login, int $excludeUserId = 0): bool
 function api_member_list_item(array $row, array $viewer, int $rosterId): array
 {
     $userId = (int) $row['user_id'];
+    $pos = $row['member_position'] ?? $row['position'] ?? 'player';
+    if (!in_array($pos, ['player', 'goalie'], true)) {
+        $pos = 'player';
+    }
+
     $item = [
         'user_id' => $userId,
         'name' => $row['display_login'] ?: api_format_phone_display((string) $row['phone']),
         'role' => $row['role'],
-        'position' => $row['position'] ?? 'player',
+        'position' => $pos,
     ];
     if (isset($row['actual'])) {
         $item['actual'] = (bool) $row['actual'];
@@ -264,6 +274,18 @@ function api_find_user_by_login(PDO $pdo, string $loginRaw): ?array
     }
 
     $digits = preg_replace('/\D+/', '', $loginRaw) ?? '';
+
+    if (strlen($digits) < 10 && api_validate_display_login($loginRaw) === null) {
+        $stmt = $pdo->prepare(
+            'SELECT * FROM users WHERE LOWER(display_login) = LOWER(?) LIMIT 1'
+        );
+        $stmt->execute([$loginRaw]);
+        $row = $stmt->fetch();
+        if ($row) {
+            return $row;
+        }
+    }
+
     if (strlen($digits) >= 10) {
         try {
             $phone = api_normalize_phone($loginRaw);
@@ -274,18 +296,7 @@ function api_find_user_by_login(PDO $pdo, string $loginRaw): ?array
                 return $row;
             }
         } catch (InvalidArgumentException) {
-            // не телефон — пробуем ник ниже
-        }
-    }
-
-    if (api_validate_display_login($loginRaw) === null) {
-        $stmt = $pdo->prepare(
-            'SELECT * FROM users WHERE LOWER(display_login) = LOWER(?) LIMIT 1'
-        );
-        $stmt->execute([$loginRaw]);
-        $row = $stmt->fetch();
-        if ($row) {
-            return $row;
+            // не телефон
         }
     }
 

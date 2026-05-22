@@ -43,7 +43,18 @@ try {
     $pdo->beginTransaction();
 
     $rosterId = db_upsert_roster($pdo, $rosterTitle, $rosterVenue, $rosterWeekday);
-    $adminId = db_upsert_user($pdo, $adminPhone, $adminPass, $adminRole, 'player', false, true);
+    $adminLogin = trim((string) ($seed['admin']['display_login'] ?? ''));
+    $adminLogin = $adminLogin !== '' ? $adminLogin : null;
+    $adminId = db_upsert_user(
+        $pdo,
+        $adminPhone,
+        $adminPass,
+        $adminRole,
+        'player',
+        false,
+        true,
+        $adminLogin
+    );
     db_link_roster_member($pdo, $rosterId, $adminId);
     db_set_roster_admin($pdo, $rosterId, $adminId, $adminRole === 'super' || $adminRole === 'admin');
 

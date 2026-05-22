@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { createGame, removeMember } from '@/api/admin'
+import { createGame, deleteRoster, removeMember } from '@/api/admin'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { MemberSwipeRow } from '@/components/MemberSwipeRow'
 import { fetchRosterGames, fetchRosterMembers } from '@/api/rosters'
 import { ApiError } from '@/api/http'
@@ -28,6 +29,13 @@ export function RosterPage() {
   const [games, setGames] = useState<GameSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [removeTarget, setRemoveTarget] = useState<{
+    user_id: number
+    name: string
+  } | null>(null)
+  const [removeBusy, setRemoveBusy] = useState(false)
+  const [deleteRosterOpen, setDeleteRosterOpen] = useState(false)
+  const [deleteRosterBusy, setDeleteRosterBusy] = useState(false)
 
   useEffect(() => {
     if (!token || !Number.isFinite(rosterId)) return
@@ -75,12 +83,6 @@ export function RosterPage() {
           <h1 className="groups-page__title">{roster.title}</h1>
           <p className="groups-page__user">{roster.venue ?? 'Пул участников'}</p>
         </header>
-      )}
-
-      {canManage && (
-        <Link to={`/rosters/${rosterId}/add-player`} className="neo-btn neo-btn--accent">
-          + Добавить игрока
-        </Link>
       )}
 
       <h2 className="groups-section-title">Игры</h2>
@@ -141,15 +143,33 @@ export function RosterPage() {
               {g.vote_active && (
                 <span className="group-card__badge group-card__badge--active">голосование</span>
               )}
+              {!g.vote_active && g.payment_active && (
+                <span className="group-card__badge group-card__badge--active">оплата</span>
+              )}
             </Link>
           </li>
         ))}
       </ul>
 
-      <h2 className="groups-section-title">Участники пула</h2>
+      <div className="groups-section-head">
+        <h2 className="groups-section-title groups-section-title--inline">
+          Участники группы
+        </h2>
+        {canManage && (
+          <Link
+            to={`/rosters/${rosterId}/add-player`}
+            className="super-add-player-btn super-add-player-btn--accent"
+            aria-label="Добавить игрока"
+          >
+            <span className="super-add-player-btn__glyph" aria-hidden>
+              +
+            </span>
+          </Link>
+        )}
+      </div>
       {canManage && (
-        <p className="groups-page__user" style={{ margin: '0 0 var(--space-sm)' }}>
-          Свайп влево — убрать из группы (аккаунт в общем списке остаётся)
+        <p className="groups-page__user roster-members-hint">
+          Свайп влево — удалить из группы.
         </p>
       )}
       <ul className="members-list">
@@ -186,20 +206,12 @@ export function RosterPage() {
             <MemberSwipeRow
               key={m.user_id}
               disabled={m.user_id === user?.id}
-              onRemove={async () => {
-                if (!token) return
+              onRemove={() => {
                 if (m.user_id === user?.id) {
-                  setError('Нельзя убрать себя из группы')
+                  setError('Нельзя удалить себя из группы')
                   return
                 }
-                if (!confirm(`Убрать «${m.name}» из группы?`)) return
-                setError('')
-                try {
-                  await removeMember(token, rosterId, m.user_id)
-                  setMembers((prev) => prev.filter((x) => x.user_id !== m.user_id))
-                } catch (err) {
-                  setError(err instanceof ApiError ? err.message : 'Не удалось убрать')
-                }
+                setRemoveTarget({ user_id: m.user_id, name: m.name })
               }}
             >
               {row}
@@ -207,6 +219,74 @@ export function RosterPage() {
           )
         })}
       </ul>
+
+      {canManage && (
+        <div className="roster-delete-group">
+          <button
+            type="button"
+            className="roster-delete-group__btn"
+            disabled={deleteRosterBusy}
+            onClick={() => setDeleteRosterOpen(true)}
+          >
+            Удалить группу
+          </button>
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={removeTarget !== null}
+        message={
+          removeTarget
+            ? `Удалить «${removeTarget.name}» из группы?`
+            : ''
+        }
+        titleId="roster-remove-confirm-title"
+        busy={removeBusy}
+        onCancel={() => {
+          if (!removeBusy) setRemoveTarget(null)
+        }}
+        onConfirm={async () => {
+          if (!token || !removeTarget || removeBusy) return
+          setRemoveBusy(true)
+          setError('')
+          try {
+            await removeMember(token, rosterId, removeTarget.user_id)
+            setMembers((prev) =>
+              prev.filter((x) => x.user_id !== removeTarget.user_id)
+            )
+            setRemoveTarget(null)
+          } catch (err) {
+            setError(err instanceof ApiError ? err.message : 'Не удалось удалить')
+          } finally {
+            setRemoveBusy(false)
+          }
+        }}
+      />
+
+      <ConfirmDialog
+        open={deleteRosterOpen}
+        message="Вы уверены в удалении группы?"
+        titleId="roster-delete-confirm-title"
+        busy={deleteRosterBusy}
+        cancelDanger
+        onCancel={() => {
+          if (!deleteRosterBusy) setDeleteRosterOpen(false)
+        }}
+        onConfirm={async () => {
+          if (!token || deleteRosterBusy) return
+          setDeleteRosterBusy(true)
+          setError('')
+          try {
+            await deleteRoster(token, rosterId)
+            setDeleteRosterOpen(false)
+            navigate('/home', { replace: true })
+          } catch (err) {
+            setError(err instanceof ApiError ? err.message : 'Не удалось удалить группу')
+          } finally {
+            setDeleteRosterBusy(false)
+          }
+        }}
+      />
     </div>
   )
 }

@@ -1,20 +1,23 @@
 import { useRef, useState } from 'react'
 
-const REVEAL_PX = 80
-const THRESHOLD = 40
+const REVEAL_PX = 92
+const THRESHOLD = 44
 
 type Props = {
   children: React.ReactNode
   onRemove: () => void | Promise<void>
   removeLabel?: string
   disabled?: boolean
+  /** danger — красный фон (выбыл); success — зелёный (в состав) */
+  variant?: 'danger' | 'success'
 }
 
 export function MemberSwipeRow({
   children,
   onRemove,
-  removeLabel = 'Убрать',
+  removeLabel = 'Удалить',
   disabled = false,
+  variant = 'danger',
 }: Props) {
   const [offset, setOffset] = useState(0)
   const startX = useRef(0)
@@ -43,11 +46,11 @@ export function MemberSwipeRow({
   }
 
   return (
-    <li className="member-swipe">
+    <li className={`member-swipe member-swipe--${variant}`}>
       <div className="member-swipe__actions" aria-hidden={offset === 0}>
         <button
           type="button"
-          className="member-swipe__remove"
+          className={`member-swipe__remove member-swipe__remove--${variant}`}
           onClick={() => {
             void onRemove()
             setOffset(0)

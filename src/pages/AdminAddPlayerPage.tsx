@@ -5,6 +5,11 @@ import { ApiError } from '@/api/http'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { useAuth } from '@/context/AuthContext'
+import {
+  buildCredentialsCopyText,
+  type CreatedCredentials,
+} from '@/lib/credentialsCopy'
+import { copyToClipboard } from '@/lib/copyToClipboard'
 import type { PlayerSearchHit } from '@/types/groups'
 import './Groups.css'
 import './LoginPage.css'
@@ -26,6 +31,8 @@ export function AdminAddPlayerPage() {
   const [searching, setSearching] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [created, setCreated] = useState<CreatedCredentials | null>(null)
+  const [copied, setCopied] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
@@ -48,15 +55,22 @@ export function AdminAddPlayerPage() {
     if (!token) return
     setError('')
     setSuccess('')
+    setCreated(null)
+    setCopied(false)
     setSubmitting(true)
+    const passwordForCopy = password
     try {
       const res = await createPlayer(token, {
         roster_id: rosterId,
         phone: phone.trim(),
-        password,
+        password: passwordForCopy,
         position,
       })
       setSuccess(`Создан: ${res.phone_display}. Передайте телефон и пароль игроку.`)
+      setCreated({
+        phone_display: res.phone_display,
+        password: passwordForCopy,
+      })
       setPhone('')
       setPassword('')
     } catch (err) {
@@ -70,6 +84,8 @@ export function AdminAddPlayerPage() {
     if (!token) return
     setError('')
     setSuccess('')
+    setCreated(null)
+    setCopied(false)
     setSubmitting(true)
     try {
       const res = await addMember(token, {
@@ -99,14 +115,22 @@ export function AdminAddPlayerPage() {
         <button
           type="button"
           className={`neo-btn add-player-tabs__btn ${tab === 'new' ? 'add-player-tabs__btn--active' : ''}`}
-          onClick={() => setTab('new')}
+          onClick={() => {
+            setTab('new')
+            setCreated(null)
+            setCopied(false)
+          }}
         >
           Новый
         </button>
         <button
           type="button"
           className={`neo-btn add-player-tabs__btn ${tab === 'existing' ? 'add-player-tabs__btn--active' : ''}`}
-          onClick={() => setTab('existing')}
+          onClick={() => {
+            setTab('existing')
+            setCreated(null)
+            setCopied(false)
+          }}
         >
           Из списка
         </button>
@@ -142,6 +166,22 @@ export function AdminAddPlayerPage() {
           />
           {error && <p className="login-page__error">{error}</p>}
           {success && <p className="login-page__success">{success}</p>}
+          {created && (
+            <Button
+              type="button"
+              onClick={() => {
+                try {
+                  copyToClipboard(buildCredentialsCopyText(created))
+                  setError('')
+                  setCopied(true)
+                } catch {
+                  setError('Не удалось скопировать')
+                }
+              }}
+            >
+              {copied ? 'Скопировано' : 'Скопировать данные'}
+            </Button>
+          )}
           <Button variant="accent" type="submit" disabled={submitting}>
             {submitting ? 'Создание…' : 'Создать аккаунт'}
           </Button>

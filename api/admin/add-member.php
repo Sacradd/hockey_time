@@ -50,6 +50,13 @@ try {
         api_json_response(['ok' => false, 'error' => 'Пользователь не найден'], 404);
     }
 
+    if (db_user_is_game_only_guest($pdo, $userId)) {
+        api_json_response([
+            'ok' => false,
+            'error' => 'Это гость одной игры — создайте аккаунт в приложении или добавьте гостя на экране игры',
+        ], 400);
+    }
+
     if (db_roster_has_member($pdo, $rosterId, $userId)) {
         api_json_response(['ok' => false, 'error' => 'Уже в этой группе'], 409);
     }

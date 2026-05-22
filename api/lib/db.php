@@ -40,7 +40,8 @@ function db_upsert_user(
     string $role,
     string $position,
     bool $mustChangePassword,
-    bool $isActive
+    bool $isActive,
+    ?string $displayLogin = null
 ): int {
     $hash = password_hash($plainPassword, PASSWORD_DEFAULT);
     $stmt = $pdo->prepare('SELECT id FROM users WHERE phone = ? LIMIT 1');
@@ -50,7 +51,9 @@ function db_upsert_user(
     if ($existing) {
         $upd = $pdo->prepare(
             'UPDATE users SET password_hash = ?, role = ?, position = ?,
-             must_change_password = ?, is_active = ? WHERE id = ?'
+             must_change_password = ?, is_active = ?,
+             display_login = COALESCE(?, display_login)
+             WHERE id = ?'
         );
         $upd->execute([
             $hash,
@@ -58,14 +61,15 @@ function db_upsert_user(
             $position,
             $mustChangePassword ? 1 : 0,
             $isActive ? 1 : 0,
+            $displayLogin,
             (int) $existing,
         ]);
         return (int) $existing;
     }
 
     $ins = $pdo->prepare(
-        'INSERT INTO users (phone, password_hash, role, position, must_change_password, is_active)
-         VALUES (?, ?, ?, ?, ?, ?)'
+        'INSERT INTO users (phone, password_hash, role, position, must_change_password, is_active, display_login)
+         VALUES (?, ?, ?, ?, ?, ?, ?)'
     );
     $ins->execute([
         $phone,
@@ -74,6 +78,7 @@ function db_upsert_user(
         $position,
         $mustChangePassword ? 1 : 0,
         $isActive ? 1 : 0,
+        $displayLogin,
     ]);
 
     return (int) $pdo->lastInsertId();
@@ -131,6 +136,40 @@ function db_roster_has_member(PDO $pdo, int $rosterId, int $userId): bool
         'SELECT 1 FROM roster_members WHERE roster_id = ? AND user_id = ? LIMIT 1'
     );
     $stmt->execute([$rosterId, $userId]);
+    return (bool) $stmt->fetchColumn();
+}
+
+/** SQL-фрагмент: не показывать гостей одной игры (нет roster_members, есть group_members.is_guest). */
+function db_sql_exclude_game_only_guests(string $alias = 'u'): string
+{
+    if ($alias !== 'u') {
+        throw new InvalidArgumentException('alias');
+    }
+
+    return 'NOT (
+        NOT EXISTS (SELECT 1 FROM roster_members rm_pool WHERE rm_pool.user_id = u.id)
+        AND EXISTS (
+            SELECT 1 FROM group_members gm_pool
+            WHERE gm_pool.user_id = u.id AND gm_pool.is_guest = 1
+        )
+    )';
+}
+
+/** Гость только на игру — не в общем пуле пользователей приложения. */
+function db_user_is_game_only_guest(PDO $pdo, int $userId): bool
+{
+    $stmt = $pdo->prepare(
+        'SELECT 1 FROM users u
+         WHERE u.id = ?
+           AND NOT EXISTS (SELECT 1 FROM roster_members rm WHERE rm.user_id = u.id)
+           AND EXISTS (
+             SELECT 1 FROM group_members gm
+             WHERE gm.user_id = u.id AND gm.is_guest = 1
+           )
+         LIMIT 1'
+    );
+    $stmt->execute([$userId]);
+
     return (bool) $stmt->fetchColumn();
 }
 

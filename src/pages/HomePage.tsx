@@ -81,7 +81,9 @@ export function HomePage() {
                 aria-label="Новая группа"
                 onClick={() => setShowCreateRoster((v) => !v)}
               >
-                +
+                <span className="super-add-player-btn__glyph" aria-hidden>
+                  +
+                </span>
               </button>
             )}
           </div>
@@ -175,7 +177,7 @@ export function HomePage() {
         </>
       )}
 
-      <h2 className="groups-section-title">Сейчас важно</h2>
+      <h2 className="groups-section-title">Предстоящие игры</h2>
 
       {!loading && !error && activeGames.length === 0 && (
         <p className="groups-page__empty">Нет активных голосований и оплат</p>

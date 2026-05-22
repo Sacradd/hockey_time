@@ -36,7 +36,8 @@ try {
                 ) AS in_roster
          FROM users u
          WHERE u.role = ?
-            AND (
+           AND " . db_sql_exclude_game_only_guests() . "
+           AND (
               LOWER(u.display_login) LIKE LOWER(?)
               OR u.phone LIKE ?
               OR REPLACE(u.phone, "7", "") LIKE ?

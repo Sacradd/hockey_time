@@ -69,9 +69,7 @@ try {
         // already has super
     }
 
-    $superPhone = api_normalize_phone('79680227771');
-    $pdo->prepare("UPDATE users SET role = 'super' WHERE phone = ?")->execute([$superPhone]);
-    $steps[] = 'super role for owner phone';
+    $steps[] = 'super: см. migrate-dev-super.php для admin/admin (локально)';
 
     if (!db_column_exists($pdo, 'roster_members', 'is_admin')) {
         $pdo->exec('ALTER TABLE roster_members ADD COLUMN is_admin TINYINT(1) NOT NULL DEFAULT 0 AFTER user_id');

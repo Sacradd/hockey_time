@@ -1,5 +1,5 @@
 import { apiFetch } from '@/api/http'
-import type { GameDetailResponse, GamePublic } from '@/types/games'
+import type { GameDetailResponse, GameLineup, GamePublic } from '@/types/games'
 
 export function fetchGameDetail(token: string, gameId: number) {
   return apiFetch<GameDetailResponse>(
@@ -42,5 +42,68 @@ export function stopVote(token: string, gameId: number) {
     method: 'POST',
     token,
     body: JSON.stringify({ game_id: gameId }),
+  })
+}
+
+/** Закрыть голосование и включить этап оплаты по игре. */
+export function startPayment(token: string, gameId: number) {
+  return apiFetch<{ ok: boolean; game: GamePublic }>('/admin/start-payment.php', {
+    method: 'POST',
+    token,
+    body: JSON.stringify({ game_id: gameId }),
+  })
+}
+
+/** Убрать из «еду»: голос → «не еду», резерв пересчитывается по времени голоса. */
+export function markPlayerNotGoing(token: string, gameId: number, userId: number) {
+  return apiFetch<{ ok: boolean; lineup: GameLineup }>('/admin/mark-not-going.php', {
+    method: 'POST',
+    token,
+    body: JSON.stringify({ game_id: gameId, user_id: userId }),
+  })
+}
+
+export const ADD_QUEUE_GUEST = '__guest__'
+
+/** Гость на эту игру: имя как ник, проверка уникальности на сервере. */
+export function addGuestToQueue(
+  token: string,
+  gameId: number,
+  guestName: string,
+  queuePosition: number,
+  memberPosition: 'player' | 'goalie' = 'player'
+) {
+  return apiFetch<{ ok: boolean; lineup: GameLineup }>('/admin/add-guest-to-queue.php', {
+    method: 'POST',
+    token,
+    body: JSON.stringify({
+      game_id: gameId,
+      guest_name: guestName.trim(),
+      position: queuePosition,
+      member_position: memberPosition,
+    }),
+  })
+}
+
+/** Вернуть в «еду» из «не едут»; место в очереди по времени занесения. */
+export function markPlayerInLineup(token: string, gameId: number, userId: number) {
+  return apiFetch<{ ok: boolean; lineup: GameLineup }>('/admin/mark-in-lineup.php', {
+    method: 'POST',
+    token,
+    body: JSON.stringify({ game_id: gameId, user_id: userId }),
+  })
+}
+
+/** Вставить/переставить полевого в очереди «еду» (сдвиг остальных). */
+export function setLineupQueuePosition(
+  token: string,
+  gameId: number,
+  userId: number,
+  position: number
+) {
+  return apiFetch<{ ok: boolean; lineup: GameLineup }>('/admin/set-lineup-position.php', {
+    method: 'POST',
+    token,
+    body: JSON.stringify({ game_id: gameId, user_id: userId, position }),
   })
 }

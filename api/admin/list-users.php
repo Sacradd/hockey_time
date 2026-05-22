@@ -21,6 +21,7 @@ try {
          LEFT JOIN roster_members rm ON rm.user_id = u.id
          LEFT JOIN rosters r ON r.id = rm.roster_id
          WHERE u.role != 'super'
+           AND " . db_sql_exclude_game_only_guests() . "
          ORDER BY COALESCE(u.display_login, u.phone) ASC, r.title ASC"
     );
 

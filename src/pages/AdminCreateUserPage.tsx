@@ -1,21 +1,27 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { createUser } from '@/api/admin'
 import { ApiError } from '@/api/http'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { useAuth } from '@/context/AuthContext'
+import {
+  buildCredentialsCopyText,
+  type CreatedCredentials,
+} from '@/lib/credentialsCopy'
+import { copyToClipboard } from '@/lib/copyToClipboard'
 import './Groups.css'
 import './LoginPage.css'
 
 export function AdminCreateUserPage() {
   const { token } = useAuth()
-  const navigate = useNavigate()
   const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
   const [isGroupAdmin, setIsGroupAdmin] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [created, setCreated] = useState<CreatedCredentials | null>(null)
+  const [copied, setCopied] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
@@ -23,19 +29,24 @@ export function AdminCreateUserPage() {
     if (!token) return
     setError('')
     setSuccess('')
+    setCreated(null)
+    setCopied(false)
     setSubmitting(true)
+    const passwordForCopy = password
     try {
       const res = await createUser(token, {
         phone: phone.trim(),
-        password,
+        password: passwordForCopy,
         is_group_admin: isGroupAdmin,
       })
       const note = res.is_group_admin
         ? ' · может создавать группы'
         : ''
-      setSuccess(
-        `Создан: ${res.phone_display}${note}. Передайте телефон и пароль. Игрок в общем списке.`
-      )
+      setSuccess(`Создан: ${res.phone_display}${note}. Передайте телефон и пароль.`)
+      setCreated({
+        phone_display: res.phone_display,
+        password: passwordForCopy,
+      })
       setPhone('')
       setPassword('')
       setIsGroupAdmin(false)
@@ -52,10 +63,7 @@ export function AdminCreateUserPage() {
         ← На главную
       </Link>
 
-      <h1 className="groups-page__title">Новый игрок в пул</h1>
-      <p className="groups-page__user">
-        Без привязки к группе. Админ группы сам создаст группу и добавит людей.
-      </p>
+      <h1 className="groups-page__title">Новый игрок</h1>
 
       <form className="login-page__form" onSubmit={handleSubmit}>
         <Input
@@ -84,14 +92,26 @@ export function AdminCreateUserPage() {
         </label>
         {error && <p className="login-page__error">{error}</p>}
         {success && <p className="login-page__success">{success}</p>}
+        {created && (
+          <Button
+            type="button"
+            onClick={() => {
+              try {
+                copyToClipboard(buildCredentialsCopyText(created))
+                setError('')
+                setCopied(true)
+              } catch {
+                setError('Не удалось скопировать')
+              }
+            }}
+          >
+            {copied ? 'Скопировано' : 'Скопировать данные'}
+          </Button>
+        )}
         <Button type="submit" variant="accent" disabled={submitting}>
-          {submitting ? 'Создание…' : 'Создать в общий список'}
+          {submitting ? 'Создание…' : 'Создать'}
         </Button>
       </form>
-
-      <Button type="button" onClick={() => navigate('/home')}>
-        Готово
-      </Button>
     </div>
   )
 }

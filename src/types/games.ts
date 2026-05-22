@@ -29,6 +29,8 @@ export interface MyVote {
 export type LineupMember = GroupMember & {
   choice?: number
   voted_at?: string
+  /** Порядок в очереди «еду» (1 = первый) */
+  queue_order?: number
 }
 
 export interface GameLineup {

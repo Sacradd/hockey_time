@@ -52,10 +52,16 @@ try {
         api_json_response(['ok' => false, 'error' => 'Вы исключены из этой игры'], 403);
     }
 
+    $existing = $pdo->prepare(
+        'SELECT choice FROM votes WHERE user_id = ? AND group_id = ? LIMIT 1'
+    );
+    $existing->execute([(int) $user['id'], $gameId]);
+    if ($existing->fetch()) {
+        api_json_response(['ok' => false, 'error' => 'Ответ уже зафиксирован, изменить нельзя'], 400);
+    }
+
     $stmt = $pdo->prepare(
-        'INSERT INTO votes (user_id, group_id, choice, voted_at)
-         VALUES (?, ?, ?, NOW())
-         ON DUPLICATE KEY UPDATE choice = VALUES(choice), voted_at = NOW()'
+        'INSERT INTO votes (user_id, group_id, choice, voted_at) VALUES (?, ?, ?, NOW())'
     );
     $stmt->execute([(int) $user['id'], $gameId, $choice]);
 

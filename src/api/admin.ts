@@ -37,6 +37,17 @@ export function createRoster(
   })
 }
 
+export function deleteRoster(token: string, rosterId: number) {
+  return apiFetch<{ ok: boolean; deleted: boolean; roster_id: number; title: string }>(
+    '/admin/delete-roster.php',
+    {
+      method: 'POST',
+      token,
+      body: JSON.stringify({ roster_id: rosterId }),
+    }
+  )
+}
+
 export function removeMember(token: string, rosterId: number, userId: number) {
   return apiFetch<{ ok: boolean; removed: boolean; name: string }>(
     '/admin/remove-member.php',
@@ -193,4 +204,4 @@ export function resetUserPassword(
   })
 }
 
-export { startVote, stopVote } from '@/api/games'
+export { startVote, stopVote, startPayment } from '@/api/games'

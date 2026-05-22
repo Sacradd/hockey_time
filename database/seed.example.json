@@ -5,8 +5,9 @@
     "weekday": 3
   },
   "admin": {
-    "phone": "79680227771",
-    "password": "ЗАМЕНИТЕ_пароль",
+    "phone": "79000000001",
+    "display_login": "admin",
+    "password": "admin",
     "role": "super"
   },
   "group": {
