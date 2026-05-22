@@ -1,0 +1,113 @@
+.game-edit-modal__box {
+  width: 100%;
+  max-width: min(calc(100vw - 2 * var(--space-lg)), 17.5rem);
+  max-height: none;
+  overflow: visible;
+  padding: var(--space-md);
+  text-align: left;
+  box-sizing: border-box;
+}
+
+.game-edit-modal__heading {
+  margin: 0 0 var(--space-sm);
+  font-size: 1rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.game-edit-modal__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  width: 100%;
+  min-width: 0;
+}
+
+.game-edit-modal__form .neo-field {
+  margin: 0;
+  width: 100%;
+  min-width: 0;
+}
+
+.game-edit-modal__form .neo-label {
+  font-size: 0.8125rem;
+  margin-bottom: 4px;
+}
+
+.game-edit-modal__form .neo-input {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  font-size: 0.9375rem;
+}
+
+.game-edit-modal__form .neo-field--date {
+  width: 100%;
+}
+
+.game-edit-modal__form .neo-date-shell {
+  min-height: 40px;
+  padding: 10px 12px;
+}
+
+.game-edit-modal__time {
+  text-align: center;
+}
+
+.game-edit-modal__error {
+  margin: 0;
+  color: var(--color-destructive-text);
+  font-size: 0.8125rem;
+  text-align: center;
+}
+
+.game-edit-modal__actions {
+  margin-top: 2px;
+  gap: var(--space-sm);
+}
+
+.game-edit-modal__actions .neo-btn.app-confirm__btn {
+  max-width: none;
+  padding: 10px 12px;
+  font-size: 0.875rem;
+}
+
+.game-edit-modal__delete-wrap {
+  margin-top: var(--space-md);
+  padding-top: 0;
+}
+
+.game-edit-modal__delete-btn {
+  width: 100%;
+  border: 1px solid var(--color-destructive-border);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--color-destructive-text);
+  cursor: pointer;
+  background: var(--color-destructive-bg);
+  box-shadow: var(--shadow-inset);
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    box-shadow 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.1s ease;
+}
+
+.game-edit-modal__delete-btn:active:not(:disabled) {
+  transform: scale(0.99);
+  box-shadow: var(--shadow-pressed);
+  border-color: rgba(204, 85, 0, 0.52);
+  color: var(--color-destructive-text-muted);
+}
+
+.game-edit-modal__delete-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

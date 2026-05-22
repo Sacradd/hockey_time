@@ -19,7 +19,10 @@ try {
     $body = api_read_json_body();
     $title = trim((string) ($body['title'] ?? ''));
     $venue = trim((string) ($body['venue'] ?? ''));
-    $weekday = isset($body['weekday']) ? (int) $body['weekday'] : null;
+    $weekday = null;
+    if (array_key_exists('weekday', $body) && $body['weekday'] !== null && $body['weekday'] !== '') {
+        $weekday = (int) $body['weekday'];
+    }
 
     if ($title === '') {
         api_json_response(['ok' => false, 'error' => 'Укажите название группы'], 400);

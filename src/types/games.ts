@@ -10,6 +10,8 @@ export interface GamePublic {
   roster_id: number
   group_date: string
   title: string | null
+  game_time: string | null
+  weekday: number | null
   roster_title: string | null
   roster_venue: string | null
   vote_active: boolean

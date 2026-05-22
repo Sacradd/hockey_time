@@ -45,6 +45,8 @@ PWA (сайт как приложение на телефоне) для **сво
 - **Экран входа:** `public/emblem.jpeg`, масштаб в `Emblem.css` (`transform: scale`)
 - На экране входа **нет** заголовка «Время хоккея» (убран по запросу) — только эмблема, логин, пароль, «Войти»
 - Мобильная ширина: `max-width: 430px` в `AppLayout`
+- **Название группы/игры:** табличка `.roster-name-plate` (рамка, акцент, линии) — страница группы (`RosterPage`) и карточки на главной (`HomePage`, вариант `--card`)
+- **Главная админа:** блоки «Группы» / «Игры»; создание группы — только название; карточки: «Кол-во участников N»
 - **Иконки КХЛ:** источник — `public/teams/_debug/{slug}.jpg` (имя = slug). В приложение: `npm.cmd run teams:import`. **Не** запускать `teams:slice` для продакшена (только черновик в `_slice_preview`, часто путает порядок).
 
 ## Структура кода
@@ -53,7 +55,10 @@ PWA (сайт как приложение на телефоне) для **сво
 src/
   App.tsx              # роуты: / и /login → LoginPage, /home → заглушка
   pages/LoginPage.tsx  # экран входа (UI без API)
-  pages/HomePage.tsx   # заглушка после входа
+  pages/HomePage.tsx   # главная: группы, игры
+  pages/RosterPage.tsx # группа: игры, участники
+  pages/GroupPage.tsx  # игра: голосование, состав, оплата
+  components/GameEditModal.tsx, InfoHint.tsx, ConfirmDialog.tsx
   components/
     Emblem.tsx         # логотип
     ui/Button.tsx, Input.tsx
@@ -107,7 +112,7 @@ docs/SPEC.md           # бизнес-логика и этапы
 users           — phone, password_hash, display_login, role, position (player|goalie), ...
 rosters         — title, venue, weekday (Среда·Кристалл, …)
 roster_members  — roster_id, user_id
-day_groups      — roster_id, date, vote_label_1/2/3, vote_go_option, vote_active, ...
+day_groups      — roster_id, group_date, title, game_time, weekday, vote_*, payment_active, ...
 votes           — user_id, group_id, choice (1|2|3), voted_at
 payments        — user_id, group_id, paid_at
 push_subscriptions — endpoint, keys, user_id

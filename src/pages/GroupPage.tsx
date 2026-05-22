@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useCallback, useEffect, useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   ADD_QUEUE_GUEST,
   addGuestToQueue,
   castVote,
   confirmPayment,
+  deleteGame,
   fetchGameDetail,
   markPlayerInLineup,
   markPlayerNotGoing,
@@ -12,10 +13,13 @@ import {
   setLineupQueuePosition,
   startPayment,
   startVote,
+  updateGame,
 } from '@/api/games'
 import { ApiError } from '@/api/http'
 import { fetchRosterMembers } from '@/api/rosters'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { GameEditModal } from '@/components/GameEditModal'
+import { InfoHint } from '@/components/InfoHint'
 import { InputDialog } from '@/components/InputDialog'
 import { MemberSwipeRow } from '@/components/MemberSwipeRow'
 import { Button } from '@/components/ui/Button'
@@ -23,6 +27,7 @@ import { Input } from '@/components/ui/Input'
 import { useAuth } from '@/context/AuthContext'
 import { validateDisplayLogin } from '@/lib/displayLogin'
 import { groupLabel } from '@/lib/formatDate'
+import { weekdayFromIsoDate } from '@/lib/weekdays'
 import { positionLabel } from '@/lib/labels'
 import type {
   GameDetailResponse,
@@ -89,44 +94,6 @@ function fieldLineupCountClass(count: number): string {
   if (count >= 16) return 'lineup-count--salad'
   if (count >= 14) return 'lineup-count--mid'
   return 'lineup-count--low'
-}
-
-function LineupAdminHint() {
-  const [open, setOpen] = useState(false)
-  const rootRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!open) return
-    const onPointerDown = (e: PointerEvent) => {
-      if (rootRef.current?.contains(e.target as Node)) return
-      setOpen(false)
-    }
-    document.addEventListener('pointerdown', onPointerDown)
-    return () => document.removeEventListener('pointerdown', onPointerDown)
-  }, [open])
-
-  return (
-    <div className="lineup-hint" ref={rootRef}>
-      <button
-        type="button"
-        className="lineup-hint__btn"
-        aria-label="Подсказка по управлению составом"
-        aria-expanded={open}
-        onClick={(e) => {
-          e.stopPropagation()
-          setOpen((v) => !v)
-        }}
-      >
-        i
-      </button>
-      {open && (
-        <div className="lineup-hint__popover neo-surface" role="tooltip">
-          <p className="lineup-hint__text">Цифра — место в очереди (нажмите, чтобы изменить).</p>
-          <p className="lineup-hint__text">Для управления составом — свайп.</p>
-        </div>
-      )}
-    </div>
-  )
 }
 
 /** Следующее свободное место в очереди полевых «еду». */
@@ -306,6 +273,7 @@ function LineupSection({
 
 export function GroupPage() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const gameId = Number(id)
   const { token, user } = useAuth()
 
@@ -344,6 +312,14 @@ export function GroupPage() {
   const [addPosition, setAddPosition] = useState('1')
   const [queueBusy, setQueueBusy] = useState(false)
   const [showAddToQueue, setShowAddToQueue] = useState(false)
+  const [gameEditOpen, setGameEditOpen] = useState(false)
+  const [deleteGameConfirmOpen, setDeleteGameConfirmOpen] = useState(false)
+  const [gameEditBusy, setGameEditBusy] = useState(false)
+  const [gameEditError, setGameEditError] = useState('')
+  const [editTitle, setEditTitle] = useState('')
+  const [editDate, setEditDate] = useState('')
+  const [editTime, setEditTime] = useState('')
+  const [editWeekday, setEditWeekday] = useState('3')
 
   const load = useCallback(() => {
     if (!token || !Number.isFinite(gameId) || gameId < 1) return
@@ -611,6 +587,70 @@ export function GroupPage() {
     }
   }
 
+  useEffect(() => {
+    if (!gameEditOpen || !game) return
+    setEditTitle(game.title ?? '')
+    setEditDate(game.group_date)
+    setEditTime(game.game_time ?? '')
+    setEditWeekday(
+      game.weekday !== null
+        ? String(game.weekday)
+        : String(weekdayFromIsoDate(game.group_date))
+    )
+  }, [gameEditOpen, game])
+
+  function openGameEdit() {
+    if (!game) return
+    setGameEditError('')
+    setGameEditOpen(true)
+  }
+
+  function closeGameEdit() {
+    if (gameEditBusy) return
+    setGameEditOpen(false)
+    setGameEditError('')
+  }
+
+  async function handleSaveGameEdit() {
+    if (!token || !game || gameEditBusy || !editDate) return
+    setGameEditBusy(true)
+    setGameEditError('')
+    try {
+      const res = await updateGame(token, {
+        game_id: gameId,
+        date: editDate,
+        title: editTitle,
+        game_time: editTime,
+        weekday: parseInt(editWeekday, 10),
+      })
+      setGame(res.game)
+      setGameEditOpen(false)
+    } catch (err) {
+      setGameEditError(
+        err instanceof ApiError ? err.message : 'Не удалось сохранить игру'
+      )
+    } finally {
+      setGameEditBusy(false)
+    }
+  }
+
+  async function handleConfirmDeleteGame() {
+    if (!token || !game || gameEditBusy) return
+    setGameEditBusy(true)
+    setError('')
+    try {
+      const res = await deleteGame(token, gameId)
+      setDeleteGameConfirmOpen(false)
+      setGameEditOpen(false)
+      navigate(`/rosters/${res.roster_id}`)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Не удалось удалить игру')
+      setDeleteGameConfirmOpen(false)
+    } finally {
+      setGameEditBusy(false)
+    }
+  }
+
   const myStatus =
     user && lineup ? findMyLineupStatus(lineup, user.id) : null
   const canManageLineup = !!game?.can_manage
@@ -650,7 +690,44 @@ export function GroupPage() {
 
       {game && (
         <header className="groups-page__header">
-          <h1 className="groups-page__title">{groupLabel(game.group_date, game.title)}</h1>
+          <div className="groups-page__title-row">
+            <h1 className="groups-page__title">
+              {groupLabel(game.group_date, game.title, {
+                gameTime: game.game_time,
+                weekday: game.weekday,
+              })}
+            </h1>
+            {game.can_manage && (
+              <button
+                type="button"
+                className="profile-edit-btn"
+                onClick={openGameEdit}
+                aria-label="Редактировать игру"
+                title="Редактировать"
+              >
+                <svg
+                  className="profile-edit-btn__icon"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M4 20h4l10.5-10.5a1.5 1.5 0 0 0 0-2.12L14.62 3.5a1.5 1.5 0 0 0-2.12 0L4 12v8z"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.75"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M13.5 6.5l4 4"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.75"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </button>
+            )}
+          </div>
           <p className="groups-page__user">
             {game.roster_title}
             {game.roster_venue ? ` · ${game.roster_venue}` : ''}
@@ -843,6 +920,36 @@ export function GroupPage() {
         onCancel={() => !markPaymentBusy && setMarkPaymentTarget(null)}
       />
 
+      <GameEditModal
+        open={gameEditOpen}
+        title={editTitle}
+        date={editDate}
+        time={editTime}
+        weekday={editWeekday}
+        error={gameEditError}
+        busy={gameEditBusy}
+        onTitleChange={setEditTitle}
+        onDateChange={(d) => {
+          setEditDate(d)
+          setEditWeekday(String(weekdayFromIsoDate(d)))
+        }}
+        onTimeChange={setEditTime}
+        onWeekdayChange={setEditWeekday}
+        onSave={() => void handleSaveGameEdit()}
+        onClose={closeGameEdit}
+        onDeleteClick={() => setDeleteGameConfirmOpen(true)}
+      />
+
+      <ConfirmDialog
+        open={deleteGameConfirmOpen}
+        message="Точно удалить игру?"
+        titleId="delete-game-confirm-title"
+        busy={gameEditBusy}
+        cancelDanger
+        onConfirm={() => void handleConfirmDeleteGame()}
+        onCancel={() => !gameEditBusy && setDeleteGameConfirmOpen(false)}
+      />
+
       <InputDialog
         open={queueEditTarget !== null}
         message={
@@ -873,7 +980,16 @@ export function GroupPage() {
             members={lineup.field_lineup}
             countClass={fieldLineupCountClass(lineup.field_lineup.length)}
             emptyHint={lineup.field_lineup.length === 0 ? 'Пока никого в основе' : undefined}
-            titleLeading={canManageLineup ? <LineupAdminHint /> : undefined}
+            titleLeading={
+              canManageLineup ? (
+                <InfoHint ariaLabel="Подсказка по управлению составом">
+                  <p className="lineup-hint__text">
+                    Цифра — место в очереди (нажмите, чтобы изменить).
+                  </p>
+                  <p className="lineup-hint__text">Для управления составом — свайп.</p>
+                </InfoHint>
+              ) : undefined
+            }
             headerAction={
               canManageLineup ? (
                 <button

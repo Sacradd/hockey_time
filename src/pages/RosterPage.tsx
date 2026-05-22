@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { createGame, deleteRoster, removeMember } from '@/api/admin'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
-import { MemberSwipeRow } from '@/components/MemberSwipeRow'
+import { InfoHint } from '@/components/InfoHint'
+import { MemberSwipeRow, SWIPE_JOKE_CLOSE_GUARD_MS } from '@/components/MemberSwipeRow'
 import { fetchRosterGames, fetchRosterMembers } from '@/api/rosters'
 import { ApiError } from '@/api/http'
 import { Button } from '@/components/ui/Button'
@@ -36,6 +37,24 @@ export function RosterPage() {
   const [removeBusy, setRemoveBusy] = useState(false)
   const [deleteRosterOpen, setDeleteRosterOpen] = useState(false)
   const [deleteRosterBusy, setDeleteRosterBusy] = useState(false)
+  const [selfJokeOpen, setSelfJokeOpen] = useState(false)
+  const selfJokeOpenedAt = useRef(0)
+
+  useEffect(() => {
+    if (!selfJokeOpen) return
+    const close = () => {
+      if (Date.now() - selfJokeOpenedAt.current < SWIPE_JOKE_CLOSE_GUARD_MS) {
+        return
+      }
+      setSelfJokeOpen(false)
+    }
+    document.addEventListener('pointerdown', close, true)
+    document.addEventListener('touchstart', close, true)
+    return () => {
+      document.removeEventListener('pointerdown', close, true)
+      document.removeEventListener('touchstart', close, true)
+    }
+  }, [selfJokeOpen])
 
   useEffect(() => {
     if (!token || !Number.isFinite(rosterId)) return
@@ -79,9 +98,10 @@ export function RosterPage() {
       </Link>
 
       {roster && (
-        <header className="groups-page__header">
-          <h1 className="groups-page__title">{roster.title}</h1>
-          <p className="groups-page__user">{roster.venue ?? 'Пул участников'}</p>
+        <header className="groups-page__header groups-page__header--center">
+          <div className="roster-name-plate">
+            <h1 className="roster-name-plate__title">{roster.title}</h1>
+          </div>
         </header>
       )}
 
@@ -152,9 +172,16 @@ export function RosterPage() {
       </ul>
 
       <div className="groups-section-head">
-        <h2 className="groups-section-title groups-section-title--inline">
-          Участники группы
-        </h2>
+        <div className="groups-section-head__main">
+          {canManage && (
+            <InfoHint ariaLabel="Подсказка по удалению из группы">
+              <p className="lineup-hint__text">Свайп влево — удалить из группы.</p>
+            </InfoHint>
+          )}
+          <h2 className="groups-section-title groups-section-title--inline">
+            Участники группы
+          </h2>
+        </div>
         {canManage && (
           <Link
             to={`/rosters/${rosterId}/add-player`}
@@ -167,11 +194,6 @@ export function RosterPage() {
           </Link>
         )}
       </div>
-      {canManage && (
-        <p className="groups-page__user roster-members-hint">
-          Свайп влево — удалить из группы.
-        </p>
-      )}
       <ul className="members-list">
         {members.map((m) => {
           const row = (
@@ -202,13 +224,22 @@ export function RosterPage() {
             return <li key={m.user_id}>{row}</li>
           }
 
+          const isSelf = m.user_id === user?.id
+          const openSelfJoke = () => {
+            selfJokeOpenedAt.current = Date.now()
+            setSelfJokeOpen(true)
+          }
+
           return (
             <MemberSwipeRow
               key={m.user_id}
-              disabled={m.user_id === user?.id}
+              blockSwipe={isSelf}
+              jokeOpen={isSelf && selfJokeOpen}
+              jokeMessage={isSelf ? 'Ну себя то зачем удалять)' : undefined}
+              onSwipeReveal={isSelf ? openSelfJoke : undefined}
               onRemove={() => {
-                if (m.user_id === user?.id) {
-                  setError('Нельзя удалить себя из группы')
+                if (isSelf) {
+                  openSelfJoke()
                   return
                 }
                 setRemoveTarget({ user_id: m.user_id, name: m.name })

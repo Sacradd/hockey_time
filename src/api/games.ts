@@ -20,6 +20,34 @@ export function markPlayerPayment(token: string, gameId: number, userId: number)
   )
 }
 
+export function updateGame(
+  token: string,
+  data: {
+    game_id: number
+    date: string
+    title?: string
+    game_time?: string
+    weekday?: number | null
+  }
+) {
+  return apiFetch<{ ok: boolean; game: GamePublic }>('/admin/update-game.php', {
+    method: 'POST',
+    token,
+    body: JSON.stringify(data),
+  })
+}
+
+export function deleteGame(token: string, gameId: number) {
+  return apiFetch<{ ok: boolean; deleted: boolean; roster_id: number }>(
+    '/admin/delete-game.php',
+    {
+      method: 'POST',
+      token,
+      body: JSON.stringify({ game_id: gameId }),
+    }
+  )
+}
+
 export function confirmPayment(token: string, gameId: number) {
   return apiFetch<{ ok: boolean; payment: { paid_at: string }; already?: boolean }>(
     '/games/confirm-payment.php',

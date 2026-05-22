@@ -12,16 +12,6 @@ import { weekdayLabel } from '@/lib/labels'
 import type { ActiveGame, Roster } from '@/types/groups'
 import './Groups.css'
 
-const WEEKDAYS = [
-  { value: 0, label: 'Воскресенье' },
-  { value: 1, label: 'Понедельник' },
-  { value: 2, label: 'Вторник' },
-  { value: 3, label: 'Среда' },
-  { value: 4, label: 'Четверг' },
-  { value: 5, label: 'Пятница' },
-  { value: 6, label: 'Суббота' },
-]
-
 export function HomePage() {
   const { token, user } = useAuth()
   const navigate = useNavigate()
@@ -32,8 +22,6 @@ export function HomePage() {
   const [error, setError] = useState('')
   const [showCreateRoster, setShowCreateRoster] = useState(false)
   const [rosterTitle, setRosterTitle] = useState('')
-  const [rosterVenue, setRosterVenue] = useState('')
-  const [rosterWeekday, setRosterWeekday] = useState('3')
   const [createBusy, setCreateBusy] = useState(false)
 
   useEffect(() => {
@@ -72,7 +60,7 @@ export function HomePage() {
         <>
           <div className="groups-section-head">
             <h2 className="groups-section-title groups-section-title--inline">
-              Управление группами
+              Группы
             </h2>
             {canCreateRoster && (
               <button
@@ -99,12 +87,9 @@ export function HomePage() {
                 try {
                   const res = await createRoster(token, {
                     title: rosterTitle.trim(),
-                    venue: rosterVenue.trim() || undefined,
-                    weekday: parseInt(rosterWeekday, 10),
                   })
                   setShowCreateRoster(false)
                   setRosterTitle('')
-                  setRosterVenue('')
                   navigate(`/rosters/${res.roster.id}`)
                 } catch (err) {
                   setError(err instanceof ApiError ? err.message : 'Не удалось создать группу')
@@ -114,32 +99,12 @@ export function HomePage() {
               }}
             >
               <Input
-                label="Название"
+                label="Название группы"
                 value={rosterTitle}
                 onChange={(e) => setRosterTitle(e.target.value)}
-                placeholder="Среда · ЛД Кристалл"
+                placeholder="Например: Основной состав"
                 required
               />
-              <Input
-                label="Площадка"
-                value={rosterVenue}
-                onChange={(e) => setRosterVenue(e.target.value)}
-                placeholder="Кристалл"
-              />
-              <label className="neo-field">
-                <span className="neo-label">День недели</span>
-                <select
-                  className="neo-input"
-                  value={rosterWeekday}
-                  onChange={(e) => setRosterWeekday(e.target.value)}
-                >
-                  {WEEKDAYS.map((d) => (
-                    <option key={d.value} value={String(d.value)}>
-                      {d.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
               <div className="vote-admin__actions">
                 <Button type="submit" variant="accent" disabled={createBusy}>
                   Создать группу
@@ -153,7 +118,7 @@ export function HomePage() {
 
           {adminRosters.length === 0 && canCreateRoster && !showCreateRoster && (
             <p className="groups-page__empty">
-              Создайте первую группу кнопкой + выше
+              Создай группу по кнопке +
             </p>
           )}
 
@@ -162,12 +127,17 @@ export function HomePage() {
               {adminRosters.map((r) => (
                 <li key={r.id} className="groups-list__item">
                   <Link to={`/rosters/${r.id}`} className="neo-surface group-card">
-                    <span className="group-card__date">{r.title}</span>
+                    <div className="roster-name-plate roster-name-plate--card">
+                      <p className="roster-name-plate__title">{r.title}</p>
+                    </div>
                     <p className="group-card__meta">
-                      {r.venue}
-                      {r.weekday !== null ? ` · ${weekdayLabel(r.weekday)}` : ''}
-                      {' · '}
-                      {r.members_count} в пуле
+                      {[
+                        r.venue,
+                        r.weekday !== null ? weekdayLabel(r.weekday) : null,
+                        `Кол-во участников ${r.members_count ?? 0}`,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
                     </p>
                   </Link>
                 </li>
@@ -177,10 +147,10 @@ export function HomePage() {
         </>
       )}
 
-      <h2 className="groups-section-title">Предстоящие игры</h2>
+      <h2 className="groups-section-title">Игры</h2>
 
       {!loading && !error && activeGames.length === 0 && (
-        <p className="groups-page__empty">Нет активных голосований и оплат</p>
+        <p className="groups-page__empty">Нет предстоящих игр</p>
       )}
 
       {!loading && !error && activeGames.length > 0 && (
@@ -189,9 +159,11 @@ export function HomePage() {
             <li key={g.id} className="groups-list__item">
               <Link to={`/groups/${g.id}`} className="neo-surface group-card">
                 <div className="group-card__row">
-                  <span className="group-card__date">
-                    {groupLabel(g.group_date, g.title)}
-                  </span>
+                  <div className="roster-name-plate roster-name-plate--card group-card__name-plate">
+                    <p className="roster-name-plate__title">
+                      {groupLabel(g.group_date, g.title)}
+                    </p>
+                  </div>
                   {(g.vote_open ?? g.vote_active) && (
                     <span className="group-card__badge group-card__badge--active">
                       голосование

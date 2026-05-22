@@ -17,6 +17,119 @@
   gap: var(--space-xs);
 }
 
+.groups-page__header--center {
+  align-items: center;
+  text-align: center;
+}
+
+.groups-page__header--center .groups-page__title {
+  width: 100%;
+  text-align: center;
+}
+
+.roster-name-plate {
+  position: relative;
+  width: 100%;
+  padding: var(--space-md) var(--space-lg);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-accent-ring);
+  background: linear-gradient(
+    165deg,
+    #323232 0%,
+    var(--color-surface) 42%,
+    #242424 100%
+  );
+  box-shadow:
+    var(--shadow-raised),
+    0 0 28px rgba(255, 107, 0, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  box-sizing: border-box;
+}
+
+.roster-name-plate::before,
+.roster-name-plate::after {
+  content: '';
+  display: block;
+  width: min(56%, 9rem);
+  height: 2px;
+  margin-inline: auto;
+  border-radius: var(--radius-full);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--color-accent) 20%,
+    var(--color-accent) 80%,
+    transparent
+  );
+  opacity: 0.85;
+}
+
+.roster-name-plate::before {
+  margin-bottom: var(--space-sm);
+}
+
+.roster-name-plate::after {
+  margin-top: var(--space-sm);
+}
+
+.roster-name-plate__title {
+  margin: 0;
+  font-size: 1.375rem;
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: 0.03em;
+  text-align: center;
+  color: var(--color-text);
+  text-wrap: balance;
+}
+
+.roster-name-plate--card {
+  padding: var(--space-sm) var(--space-md);
+}
+
+.roster-name-plate--card::before {
+  width: min(48%, 6.5rem);
+  margin-bottom: 6px;
+}
+
+.roster-name-plate--card::after {
+  width: min(48%, 6.5rem);
+  margin-top: 6px;
+}
+
+.roster-name-plate--card .roster-name-plate__title {
+  font-size: 1.0625rem;
+  line-height: 1.3;
+}
+
+.group-card__row .group-card__name-plate {
+  flex: 1;
+  min-width: 0;
+}
+
+.group-card:has(.roster-name-plate--card) .group-card__meta {
+  margin-top: var(--space-sm);
+}
+
+.group-card:has(.roster-name-plate--card) .group-card__row {
+  align-items: flex-start;
+}
+
+.groups-page__header + .groups-section-title {
+  margin-top: 0;
+}
+
+.groups-page__title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+}
+
+.groups-page__title-row .groups-page__title {
+  flex: 1;
+  min-width: 0;
+}
+
 .groups-page__title {
   font-size: 1.5rem;
   font-weight: 600;
@@ -99,6 +212,7 @@ a.group-card:visited {
   list-style: none;
   margin: 0;
   padding: 0;
+  overflow: visible;
 }
 
 .member-swipe {
@@ -114,6 +228,50 @@ a.group-card:visited {
 
 .member-swipe--success {
   background: rgba(74, 222, 128, 0.22);
+}
+
+.member-swipe--blocked {
+  overflow: visible;
+  z-index: 1;
+}
+
+.member-swipe--blocked.member-swipe--joke-open {
+  z-index: 12;
+}
+
+.member-swipe--blocked .member-swipe__inner {
+  position: relative;
+}
+
+.member-swipe--blocked .member-swipe__actions {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.member-swipe--blocked .member-swipe__panel {
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.member-swipe__joke {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: auto;
+  bottom: calc(100% + var(--space-xs));
+  z-index: 25;
+  width: auto;
+  max-width: none;
+  padding: var(--space-md);
+  box-sizing: border-box;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  font-weight: 600;
+  text-align: center;
+  color: var(--color-accent);
+  pointer-events: none;
+  box-shadow: var(--shadow-raised);
 }
 
 .member-swipe__actions {
@@ -469,6 +627,14 @@ a.group-card:visited {
   justify-content: space-between;
   gap: var(--space-md);
   margin: var(--space-lg) 0 var(--space-sm);
+}
+
+.groups-section-head__main {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex: 1;
+  min-width: 0;
 }
 
 .groups-section-title--inline {

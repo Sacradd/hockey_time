@@ -8,7 +8,7 @@ type Props = {
   onConfirm: () => void
   onCancel: () => void
   busy?: boolean
-  /** «Нет» красная (отмена опасного действия) */
+  /** «Нет» в стиле удаления (отмена опасного действия) */
   cancelDanger?: boolean
 }
 

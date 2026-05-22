@@ -14,9 +14,22 @@ function db_close_expired_vote(PDO $pdo, int $gameId): void
     )->execute([$gameId]);
 }
 
+function db_ensure_game_schedule_columns(PDO $pdo): void
+{
+    if (!db_column_exists($pdo, 'day_groups', 'game_time')) {
+        $pdo->exec('ALTER TABLE day_groups ADD COLUMN game_time TIME NULL DEFAULT NULL AFTER title');
+    }
+    if (!db_column_exists($pdo, 'day_groups', 'weekday')) {
+        $pdo->exec(
+            'ALTER TABLE day_groups ADD COLUMN weekday TINYINT UNSIGNED NULL DEFAULT NULL AFTER game_time'
+        );
+    }
+}
+
 /** @return array<string, mixed>|null */
 function db_fetch_game(PDO $pdo, int $gameId): ?array
 {
+    db_ensure_game_schedule_columns($pdo);
     db_close_expired_vote($pdo, $gameId);
 
     $pdo->prepare(
@@ -25,7 +38,7 @@ function db_fetch_game(PDO $pdo, int $gameId): ?array
     )->execute([$gameId]);
 
     $stmt = $pdo->prepare(
-        'SELECT dg.id, dg.roster_id, dg.group_date, dg.title,
+        'SELECT dg.id, dg.roster_id, dg.group_date, dg.title, dg.game_time, dg.weekday,
                 dg.vote_active, dg.payment_active, dg.vote_ends_at,
                 dg.vote_label_1, dg.vote_label_2, dg.vote_label_3, dg.vote_go_option,
                 r.title AS roster_title, r.venue AS roster_venue
@@ -96,11 +109,22 @@ function api_game_public(array $game, array $viewer, bool $canManage): array
         }
     }
 
+    $gameTime = $game['game_time'] ?? null;
+    if ($gameTime !== null && $gameTime !== '') {
+        $gameTime = substr((string) $gameTime, 0, 5);
+    } else {
+        $gameTime = null;
+    }
+
     return [
         'id' => (int) $game['id'],
         'roster_id' => (int) $game['roster_id'],
         'group_date' => $game['group_date'],
         'title' => $game['title'],
+        'game_time' => $gameTime,
+        'weekday' => isset($game['weekday']) && $game['weekday'] !== null && $game['weekday'] !== ''
+            ? (int) $game['weekday']
+            : null,
         'roster_title' => $game['roster_title'] ?? null,
         'roster_venue' => $game['roster_venue'] ?? null,
         'vote_active' => (bool) $game['vote_active'],
