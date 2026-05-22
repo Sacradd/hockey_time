@@ -8,6 +8,29 @@ export function fetchGameDetail(token: string, gameId: number) {
   )
 }
 
+/** Админ: отметить оплату полевого (в т.ч. если игрок сообщил вне приложения). */
+export function markPlayerPayment(token: string, gameId: number, userId: number) {
+  return apiFetch<{ ok: boolean; lineup: GameLineup; already?: boolean }>(
+    '/admin/mark-payment.php',
+    {
+      method: 'POST',
+      token,
+      body: JSON.stringify({ game_id: gameId, user_id: userId }),
+    }
+  )
+}
+
+export function confirmPayment(token: string, gameId: number) {
+  return apiFetch<{ ok: boolean; payment: { paid_at: string }; already?: boolean }>(
+    '/games/confirm-payment.php',
+    {
+      method: 'POST',
+      token,
+      body: JSON.stringify({ game_id: gameId }),
+    }
+  )
+}
+
 export function castVote(token: string, gameId: number, choice: number) {
   return apiFetch<{ ok: boolean; vote: { choice: number; voted_at: string } }>(
     '/games/vote.php',
@@ -45,7 +68,7 @@ export function stopVote(token: string, gameId: number) {
   })
 }
 
-/** Закрыть голосование и включить этап оплаты по игре. */
+/** Включить требование об оплате (голосование не закрывается). */
 export function startPayment(token: string, gameId: number) {
   return apiFetch<{ ok: boolean; game: GamePublic }>('/admin/start-payment.php', {
     method: 'POST',

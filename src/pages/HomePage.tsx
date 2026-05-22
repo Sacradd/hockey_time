@@ -197,7 +197,7 @@ export function HomePage() {
                       голосование
                     </span>
                   )}
-                  {!g.vote_active && g.payment_active && (
+                  {g.payment_active && (
                     <span className="group-card__badge group-card__badge--active">
                       оплата
                     </span>

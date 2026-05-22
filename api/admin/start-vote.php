@@ -20,7 +20,6 @@ try {
         ? trim((string) ($body['vote_label_3'] ?? $body['label_3'] ?? ''))
         : '';
     $goOption = (int) ($body['vote_go_option'] ?? 1);
-    $hours = (int) ($body['hours'] ?? 48);
 
     if ($gameId < 1) {
         api_json_response(['ok' => false, 'error' => 'Укажите game_id'], 400);
@@ -37,9 +36,6 @@ try {
     if ($goOption === 3 && $label3 === '') {
         api_json_response(['ok' => false, 'error' => 'Для третьего варианта нужна подпись'], 400);
     }
-    if ($hours < 1 || $hours > 168) {
-        api_json_response(['ok' => false, 'error' => 'hours: от 1 до 168'], 400);
-    }
 
     $pdo = api_db();
     $game = db_fetch_game($pdo, $gameId);
@@ -49,8 +45,6 @@ try {
 
     $rosterId = (int) $game['roster_id'];
     $viewer = api_require_roster_admin($rosterId);
-
-    $endsAt = date('Y-m-d H:i:s', time() + $hours * 3600);
 
     $pdo->beginTransaction();
 
@@ -64,7 +58,7 @@ try {
          WHERE id = ?'
     );
     $upd->execute([
-        $endsAt,
+        null,
         $label1,
         $label2,
         $label3 !== '' ? $label3 : null,

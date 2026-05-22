@@ -37,7 +37,7 @@ try {
     )->execute([$rosterId, $gameId]);
 
     $pdo->prepare(
-        'UPDATE day_groups SET vote_active = 0, payment_active = 1 WHERE id = ?'
+        'UPDATE day_groups SET payment_active = 1 WHERE id = ?'
     )->execute([$gameId]);
 
     $pdo->commit();

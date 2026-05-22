@@ -26,11 +26,17 @@ export interface MyVote {
   voted_at: string
 }
 
+export interface MyPayment {
+  paid_at: string
+}
+
 export type LineupMember = GroupMember & {
   choice?: number
   voted_at?: string
   /** Порядок в очереди «еду» (1 = первый) */
   queue_order?: number
+  /** Только для админа при payment_active */
+  paid?: boolean
 }
 
 export interface GameLineup {
@@ -48,5 +54,6 @@ export interface GameDetailResponse {
   ok: boolean
   game: GamePublic
   my_vote: MyVote | null
+  my_payment: MyPayment | null
   lineup: GameLineup
 }

@@ -19,6 +19,11 @@ function db_fetch_game(PDO $pdo, int $gameId): ?array
 {
     db_close_expired_vote($pdo, $gameId);
 
+    $pdo->prepare(
+        'UPDATE day_groups SET vote_ends_at = NULL
+         WHERE id = ? AND vote_active = 1 AND vote_ends_at IS NOT NULL'
+    )->execute([$gameId]);
+
     $stmt = $pdo->prepare(
         'SELECT dg.id, dg.roster_id, dg.group_date, dg.title,
                 dg.vote_active, dg.payment_active, dg.vote_ends_at,
@@ -106,6 +111,79 @@ function api_game_public(array $game, array $viewer, bool $canManage): array
         'payment_active' => (bool) ($game['payment_active']),
         'can_manage' => $canManage,
     ];
+}
+
+/** @return array<int, true> user_id => paid */
+function db_fetch_game_paid_user_ids(PDO $pdo, int $gameId): array
+{
+    $stmt = $pdo->prepare('SELECT user_id FROM payments WHERE group_id = ?');
+    $stmt->execute([$gameId]);
+    $map = [];
+    while ($row = $stmt->fetch()) {
+        $map[(int) $row['user_id']] = true;
+    }
+    return $map;
+}
+
+/** Позиция в roster: player | goalie */
+function db_roster_member_position(PDO $pdo, int $rosterId, int $userId): string
+{
+    $positionCol = db_column_exists($pdo, 'roster_members', 'position')
+        ? 'rm.position'
+        : 'u.position';
+    $stmt = $pdo->prepare(
+        "SELECT {$positionCol} AS member_position
+         FROM roster_members rm
+         INNER JOIN users u ON u.id = rm.user_id
+         WHERE rm.roster_id = ? AND rm.user_id = ? LIMIT 1"
+    );
+    $stmt->execute([$rosterId, $userId]);
+    $row = $stmt->fetch();
+    if (!$row) {
+        return 'player';
+    }
+    $pos = $row['member_position'] ?? 'player';
+    return in_array($pos, ['player', 'goalie'], true) ? $pos : 'player';
+}
+
+/**
+ * @param array{
+ *   field_lineup: list<array>,
+ *   field_reserve: list<array>,
+ *   field_declined: list<array>,
+ *   field_pending: list<array>,
+ *   goalie_lineup: list<array>,
+ *   goalie_reserve: list<array>,
+ *   goalie_declined: list<array>,
+ *   goalie_pending: list<array>
+ * } $lineup
+ * @return array<string, mixed>
+ */
+function db_lineup_attach_payment_flags(
+    PDO $pdo,
+    int $gameId,
+    int $rosterId,
+    array $game,
+    array $viewer,
+    array $lineup
+): array {
+    if (!(bool) ($game['payment_active'] ?? false) || !api_can_manage_roster($viewer, $rosterId)) {
+        return $lineup;
+    }
+
+    $paidIds = db_fetch_game_paid_user_ids($pdo, $gameId);
+    foreach (['field_lineup', 'field_reserve', 'field_declined', 'field_pending'] as $key) {
+        foreach ($lineup[$key] as $i => $item) {
+            if (($item['position'] ?? 'player') !== 'player') {
+                continue;
+            }
+            if (isset($paidIds[(int) $item['user_id']])) {
+                $lineup[$key][$i]['paid'] = true;
+            }
+        }
+    }
+
+    return $lineup;
 }
 
 /** @return array<int, array<string, mixed>> */
@@ -291,7 +369,7 @@ function db_compute_lineup(PDO $pdo, int $gameId, int $rosterId, array $game, ar
         }
     }
 
-    return [
+    $lineup = [
         'field_lineup' => $fieldLineup,
         'field_reserve' => $fieldReserve,
         'field_declined' => $fieldDeclined,
@@ -301,6 +379,8 @@ function db_compute_lineup(PDO $pdo, int $gameId, int $rosterId, array $game, ar
         'goalie_declined' => $goalieDeclined,
         'goalie_pending' => $goaliePending,
     ];
+
+    return db_lineup_attach_payment_flags($pdo, $gameId, $rosterId, $game, $viewer, $lineup);
 }
 
 /** @param array<string, mixed> $a

@@ -1,0 +1,14 @@
+.app-input-dialog .app-confirm__box {
+  text-align: left;
+}
+
+.app-input-dialog .app-confirm__text {
+  text-align: center;
+}
+
+.app-input-dialog__error {
+  margin: calc(-1 * var(--space-sm)) 0 var(--space-md);
+  font-size: 0.875rem;
+  color: var(--color-destructive-text);
+  text-align: center;
+}

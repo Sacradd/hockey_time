@@ -1,12 +1,14 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
   ADD_QUEUE_GUEST,
   addGuestToQueue,
   castVote,
+  confirmPayment,
   fetchGameDetail,
   markPlayerInLineup,
   markPlayerNotGoing,
+  markPlayerPayment,
   setLineupQueuePosition,
   startPayment,
   startVote,
@@ -14,6 +16,7 @@ import {
 import { ApiError } from '@/api/http'
 import { fetchRosterMembers } from '@/api/rosters'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { InputDialog } from '@/components/InputDialog'
 import { MemberSwipeRow } from '@/components/MemberSwipeRow'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -21,20 +24,31 @@ import { useAuth } from '@/context/AuthContext'
 import { validateDisplayLogin } from '@/lib/displayLogin'
 import { groupLabel } from '@/lib/formatDate'
 import { positionLabel } from '@/lib/labels'
-import type { GameDetailResponse, GameLineup, GamePublic, LineupMember } from '@/types/games'
+import type {
+  GameDetailResponse,
+  GameLineup,
+  GamePublic,
+  LineupMember,
+  MyPayment,
+} from '@/types/games'
 import type { RosterMember } from '@/types/groups'
 import './Groups.css'
 
-function formatEndsAt(iso: string | null): string {
-  if (!iso) return ''
-  const d = new Date(iso.replace(' ', 'T'))
-  if (Number.isNaN(d.getTime())) return iso
-  return d.toLocaleString('ru-RU', {
-    day: 'numeric',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+function findMyLineupMember(
+  lineup: GameLineup,
+  userId: number
+): LineupMember | undefined {
+  const all = [
+    ...lineup.field_lineup,
+    ...lineup.field_reserve,
+    ...lineup.field_declined,
+    ...lineup.field_pending,
+    ...lineup.goalie_lineup,
+    ...lineup.goalie_reserve,
+    ...lineup.goalie_declined,
+    ...lineup.goalie_pending,
+  ]
+  return all.find((m) => m.user_id === userId)
 }
 
 function findMyLineupStatus(
@@ -58,6 +72,9 @@ function findMyLineupStatus(
 }
 
 function myGameStatusClass(status: string): string {
+  if (status === 'Вы в игре (вратарь)') {
+    return 'my-game-status--success'
+  }
   if (status.startsWith('Вы в игре') || status.startsWith('Вы в резерве')) {
     return 'my-game-status--ok'
   }
@@ -72,6 +89,44 @@ function fieldLineupCountClass(count: number): string {
   if (count >= 16) return 'lineup-count--salad'
   if (count >= 14) return 'lineup-count--mid'
   return 'lineup-count--low'
+}
+
+function LineupAdminHint() {
+  const [open, setOpen] = useState(false)
+  const rootRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onPointerDown = (e: PointerEvent) => {
+      if (rootRef.current?.contains(e.target as Node)) return
+      setOpen(false)
+    }
+    document.addEventListener('pointerdown', onPointerDown)
+    return () => document.removeEventListener('pointerdown', onPointerDown)
+  }, [open])
+
+  return (
+    <div className="lineup-hint" ref={rootRef}>
+      <button
+        type="button"
+        className="lineup-hint__btn"
+        aria-label="Подсказка по управлению составом"
+        aria-expanded={open}
+        onClick={(e) => {
+          e.stopPropagation()
+          setOpen((v) => !v)
+        }}
+      >
+        i
+      </button>
+      {open && (
+        <div className="lineup-hint__popover neo-surface" role="tooltip">
+          <p className="lineup-hint__text">Цифра — место в очереди (нажмите, чтобы изменить).</p>
+          <p className="lineup-hint__text">Для управления составом — свайп.</p>
+        </div>
+      )}
+    </div>
+  )
 }
 
 /** Следующее свободное место в очереди полевых «еду». */
@@ -97,6 +152,9 @@ function LineupSection({
   onRestore,
   headerAction,
   panelBelowTitle,
+  titleLeading,
+  showPaymentBadge = false,
+  onPaymentClick,
 }: {
   title: string
   members: LineupMember[]
@@ -110,6 +168,10 @@ function LineupSection({
   onRestore?: (member: LineupMember) => void
   headerAction?: React.ReactNode
   panelBelowTitle?: React.ReactNode
+  titleLeading?: React.ReactNode
+  /** Кружок ₽ у полевых (админ, при активной оплате) */
+  showPaymentBadge?: boolean
+  onPaymentClick?: (member: LineupMember) => void
 }) {
   if (members.length === 0 && !emptyHint && !headerAction) return null
 
@@ -118,37 +180,40 @@ function LineupSection({
   return (
     <>
       <div className="lineup-section-head">
-        <h2
-          className={
-            showCountBadge
-              ? 'groups-section-title lineup-section-title'
-              : 'groups-section-title groups-section-title--inline'
-          }
-        >
-          {showCountBadge ? (
-            <>
-              <span className="lineup-section-title__label">{title}</span>
-              <span className="lineup-section-title__sep" aria-hidden="true">
-                —
-              </span>
-              <span className={countClass ? `lineup-count ${countClass}` : 'lineup-count'}>
-                {members.length}
-              </span>
-            </>
-          ) : (
-            title
-          )}
-        </h2>
+        <div className="lineup-section-head__main">
+          {titleLeading}
+          <h2
+            className={
+              showCountBadge
+                ? 'groups-section-title lineup-section-title'
+                : 'groups-section-title groups-section-title--inline'
+            }
+          >
+            {showCountBadge ? (
+              <>
+                <span className="lineup-section-title__label">{title}</span>
+                <span className="lineup-section-title__sep" aria-hidden="true">
+                  —
+                </span>
+                <span className={countClass ? `lineup-count ${countClass}` : 'lineup-count'}>
+                  {members.length}
+                </span>
+              </>
+            ) : (
+              title
+            )}
+          </h2>
+        </div>
         {headerAction}
       </div>
       {panelBelowTitle}
       {members.length === 0 ? (
         <p className="groups-page__empty">{emptyHint}</p>
       ) : (
-        <ul className="members-list">
+        <ul className="members-list members-list--compact">
           {members.map((m) => {
             const row = (
-              <div className="neo-surface member-row member-row--lineup">
+              <div className="neo-surface member-row member-row--lineup member-row--compact">
                 {m.queue_order != null &&
                   (showQueueAdmin && onPositionClick ? (
                     <button
@@ -165,19 +230,39 @@ function LineupSection({
                     </span>
                   ))}
                 <div className="member-row__body">
-                  <div className="member-row__name">
+                  <span className="member-row__name">
                     {m.name}
                     {m.is_guest && (
                       <span className="status-pill status-pill--guest member-row__guest-badge">
                         Гость
                       </span>
                     )}
-                  </div>
-                  <div className="member-row__sub">
+                  </span>
+                  <span className="member-row__role">
                     {positionLabel(m.position === 'goalie' ? 'goalie' : 'player')}
-                    {m.voted_at ? ` · ${formatEndsAt(m.voted_at)}` : ''}
-                  </div>
+                  </span>
                 </div>
+                {showPaymentBadge && m.position !== 'goalie' && (
+                  m.paid ? (
+                    <span
+                      className="lineup-pay-badge lineup-pay-badge--paid"
+                      aria-label="Оплатил"
+                      title="Оплатил"
+                    >
+                      ₽
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      className="lineup-pay-badge"
+                      aria-label={`Отметить оплату: ${m.name}`}
+                      title="Отметить оплату"
+                      onClick={() => onPaymentClick?.(m)}
+                    >
+                      ₽
+                    </button>
+                  )
+                )}
               </div>
             )
 
@@ -226,17 +311,26 @@ export function GroupPage() {
 
   const [game, setGame] = useState<GamePublic | null>(null)
   const [myVote, setMyVote] = useState<GameDetailResponse['my_vote']>(null)
+  const [myPayment, setMyPayment] = useState<MyPayment | null>(null)
   const [lineup, setLineup] = useState<GameLineup | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [voteBusy, setVoteBusy] = useState(false)
 
   const [showStart, setShowStart] = useState(false)
+  const [startVoteConfirmOpen, setStartVoteConfirmOpen] = useState(false)
+  const [adminPaymentConfirmOpen, setAdminPaymentConfirmOpen] = useState(false)
+  const [playerPaymentConfirmOpen, setPlayerPaymentConfirmOpen] = useState(false)
+  const [paymentBusy, setPaymentBusy] = useState(false)
+  const [markPaymentTarget, setMarkPaymentTarget] = useState<LineupMember | null>(null)
+  const [markPaymentBusy, setMarkPaymentBusy] = useState(false)
+  const [queueEditTarget, setQueueEditTarget] = useState<LineupMember | null>(null)
+  const [queueEditPosition, setQueueEditPosition] = useState('')
+  const [queueEditError, setQueueEditError] = useState('')
   const [label1, setLabel1] = useState('Еду')
   const [label2, setLabel2] = useState('Не еду')
   const [label3, setLabel3] = useState('')
   const [goOption, setGoOption] = useState(1)
-  const [hours, setHours] = useState('48')
   const [adminBusy, setAdminBusy] = useState(false)
   const [removeTarget, setRemoveTarget] = useState<LineupMember | null>(null)
   const [removeBusy, setRemoveBusy] = useState(false)
@@ -259,6 +353,7 @@ export function GroupPage() {
       .then((res) => {
         setGame(res.game)
         setMyVote(res.my_vote)
+        setMyPayment(res.my_payment ?? null)
         setLineup(res.lineup)
       })
       .catch((err) => {
@@ -311,7 +406,6 @@ export function GroupPage() {
         vote_label_2: label2.trim(),
         vote_label_3: label3.trim() || undefined,
         vote_go_option: goOption,
-        hours: Math.min(168, Math.max(1, parseInt(hours, 10) || 48)),
       })
       setGame(res.game)
       setShowStart(false)
@@ -353,29 +447,45 @@ export function GroupPage() {
     }
   }
 
-  async function applyQueuePosition(userId: number, position: number) {
-    if (!token || queueBusy) return
+  async function applyQueuePosition(userId: number, position: number): Promise<boolean> {
+    if (!token || queueBusy) return false
     setQueueBusy(true)
     setError('')
     try {
       const res = await setLineupQueuePosition(token, gameId, userId, position)
       setLineup(res.lineup)
+      return true
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Не удалось изменить очередь')
+      return false
     } finally {
       setQueueBusy(false)
     }
   }
 
   function handlePositionClick(member: LineupMember) {
-    const raw = prompt(
-      `Позиция в очереди для «${member.name}»`,
-      String(member.queue_order ?? 1)
-    )
-    if (raw === null) return
-    const position = parseInt(raw.trim(), 10)
-    if (!Number.isFinite(position) || position < 1) return
-    void applyQueuePosition(member.user_id, position)
+    setQueueEditError('')
+    setQueueEditPosition(String(member.queue_order ?? 1))
+    setQueueEditTarget(member)
+  }
+
+  function closeQueueEditDialog() {
+    if (queueBusy) return
+    setQueueEditTarget(null)
+    setQueueEditError('')
+  }
+
+  function handleConfirmQueueEdit() {
+    if (!queueEditTarget || queueBusy) return
+    const position = parseInt(queueEditPosition.trim(), 10)
+    if (!Number.isFinite(position) || position < 1) {
+      setQueueEditError('Укажите позицию от 1')
+      return
+    }
+    setQueueEditError('')
+    void applyQueuePosition(queueEditTarget.user_id, position).then((ok) => {
+      if (ok) setQueueEditTarget(null)
+    })
   }
 
   function validateGuestNameInput(name: string): string {
@@ -453,15 +563,40 @@ export function GroupPage() {
     setShowAddToQueue(false)
   }
 
-  async function handleStartPayment() {
-    if (
-      !token ||
-      adminBusy ||
-      !confirm('Запустить требование об оплате? Голосование будет закрыто.')
-    ) {
-      return
+  async function handleConfirmAdminMarkPayment() {
+    if (!token || !markPaymentTarget || markPaymentBusy) return
+    setMarkPaymentBusy(true)
+    setError('')
+    setMarkPaymentTarget(null)
+    try {
+      const res = await markPlayerPayment(token, gameId, markPaymentTarget.user_id)
+      setLineup(res.lineup)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Не удалось отметить оплату')
+    } finally {
+      setMarkPaymentBusy(false)
     }
+  }
+
+  async function handleConfirmPlayerPayment() {
+    if (!token || paymentBusy) return
+    setPaymentBusy(true)
+    setError('')
+    setPlayerPaymentConfirmOpen(false)
+    try {
+      const res = await confirmPayment(token, gameId)
+      setMyPayment(res.payment)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Не удалось подтвердить оплату')
+    } finally {
+      setPaymentBusy(false)
+    }
+  }
+
+  async function handleStartPayment() {
+    if (!token || adminBusy) return
     setAdminBusy(true)
+    setAdminPaymentConfirmOpen(false)
     setError('')
     try {
       const res = await startPayment(token, gameId)
@@ -479,6 +614,10 @@ export function GroupPage() {
   const myStatus =
     user && lineup ? findMyLineupStatus(lineup, user.id) : null
   const canManageLineup = !!game?.can_manage
+  const showPaymentBadge = canManageLineup && !!game?.payment_active
+  const myLineupMember =
+    user && lineup ? findMyLineupMember(lineup, user.id) : undefined
+  const isFieldPlayer = (myLineupMember?.position ?? user?.position) !== 'goalie'
   const inFieldQueue = new Set(
     lineup
       ? [...lineup.field_lineup, ...lineup.field_reserve].map((m) => m.user_id)
@@ -492,8 +631,10 @@ export function GroupPage() {
         showQueueAdmin: true as const,
         onRemove: (m: LineupMember) => setRemoveTarget(m),
         onPositionClick: handlePositionClick,
+        showPaymentBadge,
+        onPaymentClick: (m: LineupMember) => setMarkPaymentTarget(m),
       }
-    : {}
+    : { showPaymentBadge: false as const }
 
   const goLabels = [
     { n: 1, text: label1.trim() || 'Вариант 1' },
@@ -502,7 +643,7 @@ export function GroupPage() {
   ]
 
   return (
-    <div className="groups-page">
+    <div className="groups-page groups-page--game">
       <Link to="/home" className="neo-btn groups-page__back">
         ← На главную
       </Link>
@@ -514,12 +655,6 @@ export function GroupPage() {
             {game.roster_title}
             {game.roster_venue ? ` · ${game.roster_venue}` : ''}
           </p>
-          {game.vote_open && game.vote_ends_at && (
-            <p className="groups-page__user">До {formatEndsAt(game.vote_ends_at)}</p>
-          )}
-          {game.payment_active && !game.vote_active && (
-            <p className="groups-page__user vote-admin__status">Оплата</p>
-          )}
         </header>
       )}
 
@@ -534,6 +669,25 @@ export function GroupPage() {
 
       {!loading && game && !game.vote_open && !game.vote_active && (
         <p className="groups-page__empty">Голосование закрыто</p>
+      )}
+
+      {!loading && game?.payment_active && !game.can_manage && isFieldPlayer && !myPayment && (
+        <section className="payment-panel">
+          <Button
+            variant="accent"
+            className="payment-panel__btn"
+            disabled={paymentBusy}
+            onClick={() => setPlayerPaymentConfirmOpen(true)}
+          >
+            Подтверждение оплаты
+          </Button>
+        </section>
+      )}
+
+      {!loading && game?.payment_active && !game.can_manage && isFieldPlayer && myPayment && (
+        <p className="my-game-status neo-surface my-game-status--success">
+          Оплата подтверждена
+        </p>
       )}
 
       {!loading && game?.vote_open && game.vote_labels.length > 0 && !myVote && (
@@ -557,7 +711,7 @@ export function GroupPage() {
       {!loading && game?.can_manage && (
         <section className="vote-admin">
           {!game.vote_active && !showStart && (
-            <Button variant="accent" onClick={() => setShowStart(true)}>
+            <Button variant="accent" onClick={() => setStartVoteConfirmOpen(true)}>
               Запустить голосование
             </Button>
           )}
@@ -594,14 +748,6 @@ export function GroupPage() {
                   </label>
                 ))}
               </fieldset>
-              <Input
-                label="Часов на голосование"
-                type="number"
-                min={1}
-                max={168}
-                value={hours}
-                onChange={(e) => setHours(e.target.value)}
-              />
               <div className="vote-admin__actions">
                 <Button type="submit" variant="accent" disabled={adminBusy}>
                   Старт
@@ -613,20 +759,19 @@ export function GroupPage() {
             </form>
           )}
           {game.vote_active && !game.payment_active && (
-            <Button variant="accent" onClick={handleStartPayment} disabled={adminBusy}>
+            <Button
+              variant="accent"
+              onClick={() => setAdminPaymentConfirmOpen(true)}
+              disabled={adminBusy}
+            >
               Требование об оплате
             </Button>
           )}
-          {game.payment_active && !game.vote_active && (
+          {game.payment_active && (
             <p className="groups-page__user vote-admin__status">
-              Требование об оплате активно
+              Требование об оплате отправлено
             </p>
           )}
-          <p className="groups-page__user roster-members-hint vote-admin__hint">
-            Цифра — место в очереди (нажмите, чтобы изменить).
-            <br />
-            Для управления составом — свайп.
-          </p>
         </section>
       )}
 
@@ -656,6 +801,64 @@ export function GroupPage() {
         busy={restoreBusy}
       />
 
+      <ConfirmDialog
+        open={startVoteConfirmOpen}
+        message="Запустить голосование для этой игры?"
+        titleId="start-vote-confirm-title"
+        onConfirm={() => {
+          setStartVoteConfirmOpen(false)
+          setShowStart(true)
+        }}
+        onCancel={() => setStartVoteConfirmOpen(false)}
+      />
+
+      <ConfirmDialog
+        open={adminPaymentConfirmOpen}
+        message="Запустить требование об оплате? Голосование продолжится."
+        titleId="start-payment-confirm-title"
+        busy={adminBusy}
+        onConfirm={() => void handleStartPayment()}
+        onCancel={() => !adminBusy && setAdminPaymentConfirmOpen(false)}
+      />
+
+      <ConfirmDialog
+        open={playerPaymentConfirmOpen}
+        message="Подтверждаете оплату?"
+        titleId="player-payment-confirm-title"
+        busy={paymentBusy}
+        onConfirm={() => void handleConfirmPlayerPayment()}
+        onCancel={() => !paymentBusy && setPlayerPaymentConfirmOpen(false)}
+      />
+
+      <ConfirmDialog
+        open={markPaymentTarget !== null}
+        message={
+          markPaymentTarget
+            ? `Вы уверены в оплате от ${markPaymentTarget.name}?`
+            : ''
+        }
+        titleId="admin-mark-payment-title"
+        busy={markPaymentBusy}
+        onConfirm={() => void handleConfirmAdminMarkPayment()}
+        onCancel={() => !markPaymentBusy && setMarkPaymentTarget(null)}
+      />
+
+      <InputDialog
+        open={queueEditTarget !== null}
+        message={
+          queueEditTarget
+            ? `Позиция в очереди для «${queueEditTarget.name}»`
+            : ''
+        }
+        label="Место в очереди"
+        value={queueEditPosition}
+        onChange={setQueueEditPosition}
+        error={queueEditError}
+        busy={queueBusy}
+        onConfirm={handleConfirmQueueEdit}
+        onCancel={closeQueueEditDialog}
+      />
+
       {!loading && lineup && (
         <>
           <LineupSection
@@ -670,6 +873,7 @@ export function GroupPage() {
             members={lineup.field_lineup}
             countClass={fieldLineupCountClass(lineup.field_lineup.length)}
             emptyHint={lineup.field_lineup.length === 0 ? 'Пока никого в основе' : undefined}
+            titleLeading={canManageLineup ? <LineupAdminHint /> : undefined}
             headerAction={
               canManageLineup ? (
                 <button
@@ -816,6 +1020,7 @@ export function GroupPage() {
             title="Не едут"
             members={lineup.field_declined}
             onRestore={canManageLineup ? (m) => setRestoreTarget(m) : undefined}
+            {...lineupAdminProps}
           />
           <LineupSection
             title="Не едут · вратари"
@@ -825,6 +1030,7 @@ export function GroupPage() {
           <LineupSection
             title="Ещё не ответили"
             members={[...lineup.field_pending, ...lineup.goalie_pending]}
+            {...lineupAdminProps}
           />
         </>
       )}
