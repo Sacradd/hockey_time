@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { createRoster } from '@/api/admin'
 import { fetchDashboard } from '@/api/home'
 import { ApiError } from '@/api/http'
@@ -15,6 +15,7 @@ import './Groups.css'
 export function HomePage() {
   const { token, user } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [adminRosters, setAdminRosters] = useState<Roster[]>([])
   const [activeGames, setActiveGames] = useState<ActiveGame[]>([])
   const [canCreateRoster, setCanCreateRoster] = useState(false)
@@ -47,7 +48,7 @@ export function HomePage() {
     return () => {
       cancelled = true
     }
-  }, [token])
+  }, [token, location.key])
 
   const showGroupsBlock = canCreateRoster || adminRosters.length > 0
 
@@ -118,7 +119,7 @@ export function HomePage() {
 
           {adminRosters.length === 0 && canCreateRoster && !showCreateRoster && (
             <p className="groups-page__empty">
-              Создай группу по кнопке +
+              Создать группу по кнопке +
             </p>
           )}
 
@@ -127,9 +128,7 @@ export function HomePage() {
               {adminRosters.map((r) => (
                 <li key={r.id} className="groups-list__item">
                   <Link to={`/rosters/${r.id}`} className="neo-surface group-card">
-                    <div className="roster-name-plate roster-name-plate--card">
-                      <p className="roster-name-plate__title">{r.title}</p>
-                    </div>
+                    <span className="group-card__date">{r.title}</span>
                     <p className="group-card__meta">
                       {[
                         r.venue,
@@ -159,11 +158,9 @@ export function HomePage() {
             <li key={g.id} className="groups-list__item">
               <Link to={`/groups/${g.id}`} className="neo-surface group-card">
                 <div className="group-card__row">
-                  <div className="roster-name-plate roster-name-plate--card group-card__name-plate">
-                    <p className="roster-name-plate__title">
-                      {groupLabel(g.group_date, g.title)}
-                    </p>
-                  </div>
+                  <span className="group-card__date">
+                    {groupLabel(g.group_date, g.title)}
+                  </span>
                   {(g.vote_open ?? g.vote_active) && (
                     <span className="group-card__badge group-card__badge--active">
                       голосование
@@ -176,7 +173,7 @@ export function HomePage() {
                   )}
                 </div>
                 <p className="group-card__meta">
-                  {g.roster_title}
+                  Группа — {g.roster_title}
                   {g.roster_venue ? ` · ${g.roster_venue}` : ''}
                 </p>
               </Link>

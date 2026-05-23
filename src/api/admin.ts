@@ -37,6 +37,17 @@ export function createRoster(
   })
 }
 
+export function updateRoster(
+  token: string,
+  data: { roster_id: number; title: string }
+) {
+  return apiFetch<{ ok: boolean; roster: Roster }>('/admin/update-roster.php', {
+    method: 'POST',
+    token,
+    body: JSON.stringify(data),
+  })
+}
+
 export function deleteRoster(token: string, rosterId: number) {
   return apiFetch<{ ok: boolean; deleted: boolean; roster_id: number; title: string }>(
     '/admin/delete-roster.php',
@@ -65,7 +76,7 @@ export function createPlayer(
     roster_id: number
     phone: string
     password: string
-    position: 'player' | 'goalie'
+    position?: 'player' | 'goalie'
   }
 ) {
   return apiFetch<{ ok: boolean; user: User; phone_display: string }>(
@@ -93,7 +104,6 @@ export function addMember(
   data: {
     roster_id: number
     user_id: number
-    position: 'player' | 'goalie'
   }
 ) {
   return apiFetch<{ ok: boolean; user_id: number; name: string; added: boolean }>(

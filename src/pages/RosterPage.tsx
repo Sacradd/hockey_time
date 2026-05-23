@@ -1,16 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { createGame, deleteRoster, removeMember } from '@/api/admin'
+import { createGame, deleteRoster, removeMember, updateRoster } from '@/api/admin'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { InfoHint } from '@/components/InfoHint'
+import { RosterEditModal } from '@/components/RosterEditModal'
 import { MemberSwipeRow, SWIPE_JOKE_CLOSE_GUARD_MS } from '@/components/MemberSwipeRow'
 import { fetchRosterGames, fetchRosterMembers } from '@/api/rosters'
 import { ApiError } from '@/api/http'
 import { Button } from '@/components/ui/Button'
 import { DateInput } from '@/components/ui/DateInput'
+import { Input } from '@/components/ui/Input'
 import { useAuth } from '@/context/AuthContext'
 import { groupLabel } from '@/lib/formatDate'
-import { positionLabel } from '@/lib/labels'
+import { PositionPill } from '@/components/PositionPill'
 import { nextWeekdayDate } from '@/lib/nextWeekday'
 import type { GameSummary, Roster, RosterMember } from '@/types/groups'
 import './Groups.css'
@@ -22,8 +24,14 @@ export function RosterPage() {
   const navigate = useNavigate()
   const [canManage, setCanManage] = useState(false)
   const [showCreateGame, setShowCreateGame] = useState(false)
+  const [gameTitle, setGameTitle] = useState('')
   const [gameDate, setGameDate] = useState('')
   const [createBusy, setCreateBusy] = useState(false)
+  const [rosterEditOpen, setRosterEditOpen] = useState(false)
+  const [editRosterTitle, setEditRosterTitle] = useState('')
+  const [rosterEditBaseline, setRosterEditBaseline] = useState('')
+  const [rosterEditBusy, setRosterEditBusy] = useState(false)
+  const [rosterEditError, setRosterEditError] = useState('')
 
   const [roster, setRoster] = useState<Roster | null>(null)
   const [members, setMembers] = useState<RosterMember[]>([])
@@ -91,19 +99,106 @@ export function RosterPage() {
     }
   }, [token, rosterId])
 
+  function openRosterEdit() {
+    if (!roster) return
+    setRosterEditError('')
+    setRosterEditBaseline(roster.title)
+    setEditRosterTitle(roster.title)
+    setRosterEditOpen(true)
+  }
+
+  function closeRosterEdit() {
+    if (rosterEditBusy) return
+    setRosterEditOpen(false)
+    setRosterEditError('')
+  }
+
+  async function handleSaveRosterEdit() {
+    if (!token || !roster || rosterEditBusy || !editRosterTitle.trim()) return
+    setRosterEditBusy(true)
+    setRosterEditError('')
+    try {
+      const res = await updateRoster(token, {
+        roster_id: rosterId,
+        title: editRosterTitle.trim(),
+      })
+      setRoster(res.roster)
+      setRosterEditOpen(false)
+    } catch (err) {
+      setRosterEditError(
+        err instanceof ApiError ? err.message : 'Не удалось сохранить группу'
+      )
+    } finally {
+      setRosterEditBusy(false)
+    }
+  }
+
   return (
     <div className="groups-page">
-      <Link to="/home" className="neo-btn groups-page__back">
-        ← Назад
-      </Link>
-
-      {roster && (
-        <header className="groups-page__header groups-page__header--center">
+      <header className="roster-page__toolbar">
+        <Link
+          to="/home"
+          className="page-circle-btn"
+          aria-label="Назад"
+          title="Назад"
+        >
+          <svg
+            className="page-circle-btn__icon"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path
+              d="M14.5 6.5L9 12l5.5 5.5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </Link>
+        {roster ? (
           <div className="roster-name-plate">
             <h1 className="roster-name-plate__title">{roster.title}</h1>
           </div>
-        </header>
-      )}
+        ) : (
+          <p className="roster-page__toolbar-loading groups-page__empty">
+            {loading ? 'Загрузка…' : ''}
+          </p>
+        )}
+        {roster && canManage ? (
+          <button
+            type="button"
+            className="profile-edit-btn"
+            onClick={openRosterEdit}
+            aria-label="Редактировать группу"
+            title="Редактировать"
+          >
+            <svg
+              className="profile-edit-btn__icon"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                d="M4 20h4l10.5-10.5a1.5 1.5 0 0 0 0-2.12L14.62 3.5a1.5 1.5 0 0 0-2.12 0L4 12v8z"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.75"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M13.5 6.5l4 4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.75"
+                strokeLinecap="round"
+              />
+            </svg>
+          </button>
+        ) : (
+          <span className="roster-page__toolbar-spacer" aria-hidden />
+        )}
+      </header>
 
       <h2 className="groups-section-title">Игры</h2>
 
@@ -122,7 +217,12 @@ export function RosterPage() {
             setCreateBusy(true)
             setError('')
             try {
-              const res = await createGame(token, { roster_id: rosterId, date: gameDate })
+              const title = gameTitle.trim()
+              const res = await createGame(token, {
+                roster_id: rosterId,
+                date: gameDate,
+                title: title || undefined,
+              })
               navigate(`/groups/${res.game.id}`)
             } catch (err) {
               setError(err instanceof ApiError ? err.message : 'Не удалось создать игру')
@@ -131,6 +231,13 @@ export function RosterPage() {
             }
           }}
         >
+          <Input
+            label="Название"
+            value={gameTitle}
+            onChange={(e) => setGameTitle(e.target.value)}
+            placeholder="Можно оставить пустым"
+            autoComplete="off"
+          />
           <DateInput
             label="Дата"
             value={gameDate}
@@ -207,16 +314,13 @@ export function RosterPage() {
                     </span>
                   )}
                 </div>
-                <div className="member-row__sub">
-                  {positionLabel(m.position)}
-                  {!m.is_active ? ' · не активирован' : ''}
-                </div>
+                {!m.is_active && (
+                  <div className="member-row__sub">
+                    <span className="member-row__inactive">не активирован</span>
+                  </div>
+                )}
               </div>
-              <span
-                className={`status-pill ${m.position === 'goalie' ? 'status-pill--guest' : 'status-pill--actual'}`}
-              >
-                {positionLabel(m.position)}
-              </span>
+              <PositionPill position={m.position} />
             </div>
           )
 
@@ -251,18 +355,17 @@ export function RosterPage() {
         })}
       </ul>
 
-      {canManage && (
-        <div className="roster-delete-group">
-          <button
-            type="button"
-            className="roster-delete-group__btn"
-            disabled={deleteRosterBusy}
-            onClick={() => setDeleteRosterOpen(true)}
-          >
-            Удалить группу
-          </button>
-        </div>
-      )}
+      <RosterEditModal
+        open={rosterEditOpen}
+        title={editRosterTitle}
+        initialTitle={rosterEditBaseline}
+        error={rosterEditError}
+        busy={rosterEditBusy}
+        onTitleChange={setEditRosterTitle}
+        onSave={() => void handleSaveRosterEdit()}
+        onClose={closeRosterEdit}
+        onDeleteClick={() => setDeleteRosterOpen(true)}
+      />
 
       <ConfirmDialog
         open={removeTarget !== null}
@@ -310,6 +413,7 @@ export function RosterPage() {
           try {
             await deleteRoster(token, rosterId)
             setDeleteRosterOpen(false)
+            setRosterEditOpen(false)
             navigate('/home', { replace: true })
           } catch (err) {
             setError(err instanceof ApiError ? err.message : 'Не удалось удалить группу')

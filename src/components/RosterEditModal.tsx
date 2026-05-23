@@ -1,45 +1,35 @@
 import { useId } from 'react'
 import { Button } from '@/components/ui/Button'
-import { DateInput } from '@/components/ui/DateInput'
 import { Input } from '@/components/ui/Input'
-import { GAME_WEEKDAY_OPTIONS } from '@/lib/weekdays'
 import './ConfirmDialog.css'
 import './GameEditModal.css'
 
 type Props = {
   open: boolean
   title: string
-  date: string
-  time: string
-  weekday: string
+  /** Название на момент открытия — для сравнения «есть изменения». */
+  initialTitle: string
   error: string
   busy: boolean
   onTitleChange: (v: string) => void
-  onDateChange: (v: string) => void
-  onTimeChange: (v: string) => void
-  onWeekdayChange: (v: string) => void
   onSave: () => void
   onClose: () => void
   onDeleteClick: () => void
 }
 
-export function GameEditModal({
+export function RosterEditModal({
   open,
   title,
-  date,
-  time,
-  weekday,
+  initialTitle,
   error,
   busy,
   onTitleChange,
-  onDateChange,
-  onTimeChange,
-  onWeekdayChange,
   onSave,
   onClose,
   onDeleteClick,
 }: Props) {
   const titleId = useId()
+  const hasChanges = title.trim() !== initialTitle.trim()
 
   if (!open) return null
 
@@ -59,7 +49,7 @@ export function GameEditModal({
       />
       <div className="app-confirm__box neo-surface game-edit-modal__box">
         <h2 id={titleId} className="game-edit-modal__heading">
-          Редактирование игры
+          Редактирование группы
         </h2>
         <form
           className="game-edit-modal__form"
@@ -73,56 +63,31 @@ export function GameEditModal({
             value={title}
             disabled={busy}
             onChange={(e) => onTitleChange(e.target.value)}
-            placeholder="Можно оставить пустым"
+            required
             autoComplete="off"
           />
-          <DateInput
-            label="Дата"
-            value={date}
-            required
-            disabled={busy}
-            onChange={onDateChange}
-          />
-          <Input
-            label="Время"
-            type="time"
-            className="game-edit-modal__time"
-            value={time}
-            disabled={busy}
-            onChange={(e) => onTimeChange(e.target.value)}
-          />
-          <label className="neo-field">
-            <span className="neo-label">День недели</span>
-            <select
-              className="neo-input"
-              value={weekday}
-              disabled={busy}
-              onChange={(e) => onWeekdayChange(e.target.value)}
-            >
-              {GAME_WEEKDAY_OPTIONS.map((d) => (
-                <option key={d.value} value={String(d.value)}>
-                  {d.label}
-                </option>
-              ))}
-            </select>
-          </label>
           {error ? <p className="game-edit-modal__error">{error}</p> : null}
           <div className="app-confirm__actions game-edit-modal__actions">
             <Button
               type="submit"
-              variant="accent"
-              className="app-confirm__btn app-confirm__btn--no"
-              disabled={busy || !date}
+              variant={hasChanges ? 'accent' : 'default'}
+              className={`app-confirm__btn ${
+                hasChanges ? 'app-confirm__btn--no' : 'app-confirm__btn--yes'
+              }`}
+              disabled={busy || !title.trim() || !hasChanges}
             >
-              Сохранить
+              Да
             </Button>
             <Button
               type="button"
-              className="app-confirm__btn app-confirm__btn--yes"
+              variant={hasChanges ? 'default' : 'accent'}
+              className={`app-confirm__btn ${
+                hasChanges ? 'app-confirm__btn--yes' : 'app-confirm__btn--no'
+              }`}
               disabled={busy}
               onClick={onClose}
             >
-              Отмена
+              Нет
             </Button>
           </div>
           <div className="game-edit-modal__delete-wrap">
@@ -132,7 +97,7 @@ export function GameEditModal({
               disabled={busy}
               onClick={onDeleteClick}
             >
-              Удалить игру
+              Удалить группу
             </button>
           </div>
         </form>

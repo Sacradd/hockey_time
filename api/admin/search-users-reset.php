@@ -28,7 +28,7 @@ try {
             'SELECT u.id, u.phone, u.display_login, u.is_active, u.role
              FROM users u
              WHERE u.role != ?
-               AND " . db_sql_exclude_game_only_guests() . "
+               AND ' . db_sql_exclude_game_only_guests() . '
                AND (
                  LOWER(u.display_login) LIKE LOWER(?)
                  OR u.phone LIKE ?

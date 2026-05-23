@@ -115,10 +115,18 @@ function db_find_user_id_by_phone(PDO $pdo, string $phone): ?int
 }
 
 /** @throws InvalidArgumentException */
-function db_create_player_user(PDO $pdo, string $phone, string $plainPassword): int
-{
+function db_create_player_user(
+    PDO $pdo,
+    string $phone,
+    string $plainPassword,
+    string $position = 'player'
+): int {
     if (db_find_user_id_by_phone($pdo, $phone) !== null) {
         throw new InvalidArgumentException('Игрок с таким телефоном уже есть — добавьте из списка');
+    }
+
+    if (!in_array($position, ['player', 'goalie'], true)) {
+        $position = 'player';
     }
 
     $hash = password_hash($plainPassword, PASSWORD_DEFAULT);
@@ -126,7 +134,7 @@ function db_create_player_user(PDO $pdo, string $phone, string $plainPassword): 
         'INSERT INTO users (phone, password_hash, role, position, must_change_password, is_active)
          VALUES (?, ?, ?, ?, 1, 0)'
     );
-    $ins->execute([$phone, $hash, 'player', 'player']);
+    $ins->execute([$phone, $hash, 'player', $position]);
     return (int) $pdo->lastInsertId();
 }
 

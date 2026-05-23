@@ -28,7 +28,7 @@ import { useAuth } from '@/context/AuthContext'
 import { validateDisplayLogin } from '@/lib/displayLogin'
 import { groupLabel } from '@/lib/formatDate'
 import { weekdayFromIsoDate } from '@/lib/weekdays'
-import { positionLabel } from '@/lib/labels'
+import { PositionPill } from '@/components/PositionPill'
 import type {
   GameDetailResponse,
   GameLineup,
@@ -205,10 +205,8 @@ function LineupSection({
                       </span>
                     )}
                   </span>
-                  <span className="member-row__role">
-                    {positionLabel(m.position === 'goalie' ? 'goalie' : 'player')}
-                  </span>
                 </div>
+                <PositionPill position={m.position} />
                 {showPaymentBadge && m.position !== 'goalie' && (
                   m.paid ? (
                     <span
@@ -297,8 +295,6 @@ export function GroupPage() {
   const [queueEditError, setQueueEditError] = useState('')
   const [label1, setLabel1] = useState('Еду')
   const [label2, setLabel2] = useState('Не еду')
-  const [label3, setLabel3] = useState('')
-  const [goOption, setGoOption] = useState(1)
   const [adminBusy, setAdminBusy] = useState(false)
   const [removeTarget, setRemoveTarget] = useState<LineupMember | null>(null)
   const [removeBusy, setRemoveBusy] = useState(false)
@@ -380,8 +376,7 @@ export function GroupPage() {
         game_id: gameId,
         vote_label_1: label1.trim(),
         vote_label_2: label2.trim(),
-        vote_label_3: label3.trim() || undefined,
-        vote_go_option: goOption,
+        vote_go_option: 1,
       })
       setGame(res.game)
       setShowStart(false)
@@ -676,12 +671,6 @@ export function GroupPage() {
       }
     : { showPaymentBadge: false as const }
 
-  const goLabels = [
-    { n: 1, text: label1.trim() || 'Вариант 1' },
-    { n: 2, text: label2.trim() || 'Вариант 2' },
-    ...(label3.trim() ? [{ n: 3, text: label3.trim() }] : []),
-  ]
-
   return (
     <div className="groups-page groups-page--game">
       <Link to="/home" className="neo-btn groups-page__back">
@@ -806,25 +795,6 @@ export function GroupPage() {
                 onChange={(e) => setLabel2(e.target.value)}
                 required
               />
-              <Input
-                label="Третий вариант (необязательно)"
-                value={label3}
-                onChange={(e) => setLabel3(e.target.value)}
-              />
-              <fieldset className="vote-admin__go">
-                <legend className="vote-admin__go-legend">Вариант «еду в состав»</legend>
-                {goLabels.map((opt) => (
-                  <label key={opt.n} className="vote-admin__go-opt">
-                    <input
-                      type="radio"
-                      name="goOption"
-                      checked={goOption === opt.n}
-                      onChange={() => setGoOption(opt.n)}
-                    />
-                    {opt.text}
-                  </label>
-                ))}
-              </fieldset>
               <div className="vote-admin__actions">
                 <Button type="submit" variant="accent" disabled={adminBusy}>
                   Старт

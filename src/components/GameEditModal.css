@@ -91,20 +91,25 @@
   color: var(--color-destructive-text);
   cursor: pointer;
   background: var(--color-destructive-bg);
-  box-shadow: var(--shadow-inset);
+  transform: translateY(var(--btn-lift));
+  box-shadow: var(--btn-shadow);
   -webkit-tap-highlight-color: transparent;
   transition:
+    transform 0.15s ease,
     box-shadow 0.15s ease,
     border-color 0.15s ease,
-    color 0.15s ease,
-    transform 0.1s ease;
+    color 0.15s ease;
 }
 
 .game-edit-modal__delete-btn:active:not(:disabled) {
-  transform: scale(0.99);
-  box-shadow: var(--shadow-pressed);
+  transform: translateY(0) scale(0.99);
+  box-shadow: var(--btn-shadow-active);
   border-color: rgba(204, 85, 0, 0.52);
   color: var(--color-destructive-text-muted);
+}
+
+.game-edit-modal__delete-btn:disabled {
+  transform: none;
 }
 
 .game-edit-modal__delete-btn:disabled {

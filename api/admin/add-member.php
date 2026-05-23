@@ -16,17 +16,12 @@ try {
     $rosterId = (int) ($body['roster_id'] ?? 0);
     $userId = (int) ($body['user_id'] ?? 0);
     $phoneRaw = (string) ($body['phone'] ?? '');
-    $position = (string) ($body['position'] ?? 'player');
 
     if ($rosterId < 1) {
         api_json_response(['ok' => false, 'error' => 'Укажите roster_id'], 400);
     }
 
     api_require_roster_admin($rosterId);
-
-    if (!api_validate_position($position)) {
-        api_json_response(['ok' => false, 'error' => 'position: player или goalie'], 400);
-    }
 
     $pdo = api_db();
 
@@ -43,11 +38,16 @@ try {
         api_json_response(['ok' => false, 'error' => 'Укажите user_id или телефон'], 400);
     }
 
-    $u = $pdo->prepare('SELECT id, display_login, phone FROM users WHERE id = ? LIMIT 1');
+    $u = $pdo->prepare('SELECT id, display_login, phone, position FROM users WHERE id = ? LIMIT 1');
     $u->execute([$userId]);
     $userRow = $u->fetch();
     if (!$userRow) {
         api_json_response(['ok' => false, 'error' => 'Пользователь не найден'], 404);
+    }
+
+    $position = (string) ($userRow['position'] ?? 'player');
+    if (!in_array($position, ['player', 'goalie'], true)) {
+        $position = 'player';
     }
 
     if (db_user_is_game_only_guest($pdo, $userId)) {

@@ -71,7 +71,9 @@ try {
          FROM day_groups dg
          INNER JOIN rosters r ON r.id = dg.roster_id
          INNER JOIN roster_members rm ON rm.roster_id = dg.roster_id AND rm.user_id = ?
-         WHERE dg.vote_active = 1 OR dg.payment_active = 1
+         WHERE dg.group_date >= CURDATE()
+            OR dg.vote_active = 1
+            OR dg.payment_active = 1
          ORDER BY dg.group_date ASC, dg.id ASC'
     );
     $gamesStmt->execute([$userId]);

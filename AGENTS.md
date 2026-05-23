@@ -45,8 +45,9 @@ PWA (сайт как приложение на телефоне) для **сво
 - **Экран входа:** `public/emblem.jpeg`, масштаб в `Emblem.css` (`transform: scale`)
 - На экране входа **нет** заголовка «Время хоккея» (убран по запросу) — только эмблема, логин, пароль, «Войти»
 - Мобильная ширина: `max-width: 430px` в `AppLayout`
-- **Название группы/игры:** табличка `.roster-name-plate` (рамка, акцент, линии) — страница группы (`RosterPage`) и карточки на главной (`HomePage`, вариант `--card`)
-- **Главная админа:** блоки «Группы» / «Игры»; создание группы — только название; карточки: «Кол-во участников N»
+- **Кнопки:** все `.neo-btn` / `Button` — приподнятый неоморф (`--btn-lift`, `--btn-shadow` в `tokens.css`); оранжевые — `variant="accent"` / `neo-btn--accent` (`--accent-cta-*`). Не дублировать тени в компонентах
+- **Название группы:** табличка `.roster-name-plate` (рамка, акцент, линии) — только страница управления группой (`RosterPage`); на главной карточки — простой текст
+- **Главная админа:** блоки «Группы» / «Игры»; создание группы — только название; карточки: «Кол-во участников N»; в «Играх» — предстоящие игры + активные голосование/оплата; подпись «Группа — …»
 - **Иконки КХЛ:** источник — `public/teams/_debug/{slug}.jpg` (имя = slug). В приложение: `npm.cmd run teams:import`. **Не** запускать `teams:slice` для продакшена (только черновик в `_slice_preview`, часто путает порядок).
 
 ## Структура кода
@@ -58,7 +59,7 @@ src/
   pages/HomePage.tsx   # главная: группы, игры
   pages/RosterPage.tsx # группа: игры, участники
   pages/GroupPage.tsx  # игра: голосование, состав, оплата
-  components/GameEditModal.tsx, InfoHint.tsx, ConfirmDialog.tsx
+  components/GameEditModal.tsx, RosterEditModal.tsx, PositionPill.tsx, InfoHint.tsx, ConfirmDialog.tsx
   components/
     Emblem.tsx         # логотип
     ui/Button.tsx, Input.tsx

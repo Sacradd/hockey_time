@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { Link, useParams } from 'react-router-dom'
 import { addMember, createPlayer, searchPlayers } from '@/api/admin'
 import { ApiError } from '@/api/http'
+import { PositionPill } from '@/components/PositionPill'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { useAuth } from '@/context/AuthContext'
@@ -16,39 +17,68 @@ import './LoginPage.css'
 
 type Tab = 'new' | 'existing'
 
+function hitLabel(h: PlayerSearchHit): string {
+  return h.name
+}
+
 export function AdminAddPlayerPage() {
   const { id } = useParams()
   const rosterId = Number(id)
   const { token } = useAuth()
-  const navigate = useNavigate()
-
   const [tab, setTab] = useState<Tab>('new')
   const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
-  const [position, setPosition] = useState<'player' | 'goalie'>('player')
+  const [newUserPosition, setNewUserPosition] = useState<'player' | 'goalie'>('player')
   const [searchQ, setSearchQ] = useState('')
   const [hits, setHits] = useState<PlayerSearchHit[]>([])
+  const [selectedPlayer, setSelectedPlayer] = useState<PlayerSearchHit | null>(null)
   const [searching, setSearching] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [created, setCreated] = useState<CreatedCredentials | null>(null)
   const [copied, setCopied] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  /** После выбора карточки подставляем ник в поле, но не дергаем список повторным поиском */
+  const skipSearchOnceRef = useRef(false)
 
   useEffect(() => {
-    if (!token || tab !== 'existing' || searchQ.trim().length < 2) {
+    if (!token || tab !== 'existing' || !Number.isFinite(rosterId)) {
       setHits([])
       return
     }
+
+    if (skipSearchOnceRef.current) {
+      skipSearchOnceRef.current = false
+      return
+    }
+
+    const delay = searchQ.trim().length >= 2 ? 300 : 0
     const t = setTimeout(() => {
       setSearching(true)
+      setError('')
       searchPlayers(token, rosterId, searchQ.trim())
         .then((res) => setHits(res.players))
-        .catch(() => setHits([]))
+        .catch((err) => {
+          setHits([])
+          setError(err instanceof ApiError ? err.message : 'Не удалось загрузить список')
+        })
         .finally(() => setSearching(false))
-    }, 300)
+    }, delay)
+
     return () => clearTimeout(t)
   }, [token, rosterId, searchQ, tab])
+
+  function switchTab(next: Tab) {
+    setTab(next)
+    setCreated(null)
+    setCopied(false)
+    setError('')
+    setSuccess('')
+    if (next === 'existing') {
+      setSearchQ('')
+      setSelectedPlayer(null)
+    }
+  }
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
@@ -64,7 +94,7 @@ export function AdminAddPlayerPage() {
         roster_id: rosterId,
         phone: phone.trim(),
         password: passwordForCopy,
-        position,
+        position: newUserPosition,
       })
       setSuccess(`Создан: ${res.phone_display}. Передайте телефон и пароль игроку.`)
       setCreated({
@@ -80,27 +110,35 @@ export function AdminAddPlayerPage() {
     }
   }
 
-  async function handleAddExisting(userId: number) {
-    if (!token) return
+  async function handleAddSelected() {
+    if (!token || !selectedPlayer) return
     setError('')
     setSuccess('')
     setCreated(null)
     setCopied(false)
     setSubmitting(true)
+    const userId = selectedPlayer.user_id
     try {
       const res = await addMember(token, {
         roster_id: rosterId,
         user_id: userId,
-        position,
       })
       setSuccess(`Добавлен: ${res.name}`)
       setSearchQ('')
-      setHits([])
+      setSelectedPlayer(null)
+      setHits((prev) => prev.filter((h) => h.user_id !== userId))
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Ошибка')
     } finally {
       setSubmitting(false)
     }
+  }
+
+  function selectPlayer(h: PlayerSearchHit) {
+    setSelectedPlayer(h)
+    skipSearchOnceRef.current = true
+    setSearchQ(hitLabel(h))
+    setError('')
   }
 
   return (
@@ -114,42 +152,35 @@ export function AdminAddPlayerPage() {
       <div className="add-player-tabs">
         <button
           type="button"
-          className={`neo-btn add-player-tabs__btn ${tab === 'new' ? 'add-player-tabs__btn--active' : ''}`}
-          onClick={() => {
-            setTab('new')
-            setCreated(null)
-            setCopied(false)
-          }}
+          className={`neo-btn add-player-tabs__btn${tab === 'new' ? ' neo-btn--accent' : ''}`}
+          onClick={() => switchTab('new')}
         >
           Новый
         </button>
         <button
           type="button"
-          className={`neo-btn add-player-tabs__btn ${tab === 'existing' ? 'add-player-tabs__btn--active' : ''}`}
-          onClick={() => {
-            setTab('existing')
-            setCreated(null)
-            setCopied(false)
-          }}
+          className={`neo-btn add-player-tabs__btn${tab === 'existing' ? ' neo-btn--accent' : ''}`}
+          onClick={() => switchTab('existing')}
         >
           Из списка
         </button>
       </div>
 
-      <label className="neo-field" style={{ marginBottom: 'var(--space-md)' }}>
-        <span className="neo-label">Позиция в группе</span>
-        <select
-          className="neo-input"
-          value={position}
-          onChange={(e) => setPosition(e.target.value as 'player' | 'goalie')}
-        >
-          <option value="player">Полевой</option>
-          <option value="goalie">Вратарь</option>
-        </select>
-      </label>
-
       {tab === 'new' && (
         <form className="login-page__form" onSubmit={handleCreate}>
+          <label className="neo-field">
+            <span className="neo-label">Амплуа</span>
+            <select
+              className="neo-input"
+              value={newUserPosition}
+              onChange={(e) =>
+                setNewUserPosition(e.target.value as 'player' | 'goalie')
+              }
+            >
+              <option value="player">Полевой</option>
+              <option value="goalie">Вратарь</option>
+            </select>
+          </label>
           <Input
             id="phone"
             type="tel"
@@ -195,38 +226,71 @@ export function AdminAddPlayerPage() {
             type="search"
             placeholder="Ник или телефон (от 2 символов)"
             value={searchQ}
-            onChange={(e) => setSearchQ(e.target.value)}
+            onChange={(e) => {
+              setSearchQ(e.target.value)
+              setSelectedPlayer(null)
+            }}
+            autoComplete="off"
           />
-          {searching && <p className="groups-page__empty">Поиск…</p>}
+          {searching && hits.length === 0 && (
+            <p className="groups-page__empty">Поиск…</p>
+          )}
+          {!searching && searchQ.trim().length >= 2 && hits.length === 0 && (
+            <p className="groups-page__empty">Никого не найдено</p>
+          )}
+          {!searching && searchQ.trim().length < 2 && hits.length === 0 && (
+            <p className="groups-page__empty">
+              В пуле пока нет свободных игроков для этой группы
+            </p>
+          )}
           <ul className="search-hits">
-            {hits.map((h) => (
-              <li key={h.user_id}>
-                <button
-                  type="button"
-                  className="neo-surface search-hits__item"
-                  disabled={h.in_roster || submitting}
-                  onClick={() => handleAddExisting(h.user_id)}
-                >
-                  <span className="search-hits__name">{h.name}</span>
-                  <span className="search-hits__meta">
-                    {h.in_roster
-                      ? 'уже в группе'
-                      : h.is_active
-                        ? 'активен'
-                        : 'не активирован'}
-                  </span>
-                </button>
-              </li>
-            ))}
+            {hits.map((h) => {
+              const selected = selectedPlayer?.user_id === h.user_id
+              return (
+                <li key={h.user_id}>
+                  <button
+                    type="button"
+                    className={`neo-surface search-hits__item${
+                      selected ? ' search-hits__item--selected' : ''
+                    }`}
+                    disabled={submitting}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => selectPlayer(h)}
+                  >
+                    <span className="search-hits__name-wrap">
+                      <span className="search-hits__name">{h.name}</span>
+                      <span className="search-hits__meta">
+                        {[
+                          h.phone_display && h.name !== h.phone_display
+                            ? h.phone_display
+                            : null,
+                          !h.is_active ? 'не активирован' : null,
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </span>
+                    </span>
+                    <PositionPill position={h.position} />
+                  </button>
+                </li>
+              )
+            })}
           </ul>
           {error && <p className="login-page__error">{error}</p>}
           {success && <p className="login-page__success">{success}</p>}
         </div>
       )}
 
-      <Button type="button" variant="default" onClick={() => navigate(`/rosters/${rosterId}`)}>
-        Готово
-      </Button>
+      {tab === 'existing' && (
+        <Button
+          type="button"
+          variant="accent"
+          disabled={!selectedPlayer || submitting}
+          onClick={() => void handleAddSelected()}
+        >
+          {submitting ? 'Добавление…' : 'Добавить'}
+        </Button>
+      )}
     </div>
   )
 }

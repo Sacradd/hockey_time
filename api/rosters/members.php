@@ -37,12 +37,12 @@ try {
         : '';
 
     $stmt = $pdo->prepare(
-        "SELECT u.id, u.phone, u.display_login, u.role, {$positionCol} AS position, u.is_active,
+        "SELECT u.id, u.phone, u.display_login, u.role, {$positionCol} AS member_position, u.is_active,
                 {$adminCol} AS is_admin
          FROM roster_members rm
          INNER JOIN users u ON u.id = rm.user_id
          WHERE rm.roster_id = ?
-         ORDER BY {$orderBy}u.position ASC, COALESCE(u.display_login, u.phone) ASC"
+         ORDER BY {$orderBy}{$positionCol} ASC, COALESCE(u.display_login, u.phone) ASC"
     );
     $stmt->execute([$rosterId]);
 

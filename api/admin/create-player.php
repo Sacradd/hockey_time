@@ -40,7 +40,7 @@ try {
         api_json_response(['ok' => false, 'error' => 'Группа не найдена'], 404);
     }
 
-    $userId = db_create_player_user($pdo, $phone, $password);
+    $userId = db_create_player_user($pdo, $phone, $password, $position);
     db_link_roster_member($pdo, $rosterId, $userId, $position);
 
     $stmt = $pdo->prepare('SELECT * FROM users WHERE id = ? LIMIT 1');

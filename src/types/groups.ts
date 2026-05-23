@@ -68,6 +68,8 @@ export interface ProfileRosterSummary {
 export interface PlayerSearchHit {
   user_id: number
   name: string
+  phone_display?: string
+  position?: 'player' | 'goalie'
   is_active: boolean
   in_roster: boolean
 }

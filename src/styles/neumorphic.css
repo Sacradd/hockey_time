@@ -22,11 +22,16 @@
   padding: 14px 20px;
   border: none;
   border-radius: var(--radius-md);
-  background: var(--color-surface);
+  background: var(--btn-bg);
   color: var(--color-text);
-  box-shadow: var(--shadow-raised);
+  transform: translateY(var(--btn-lift));
+  box-shadow: var(--btn-shadow);
   cursor: pointer;
-  transition: box-shadow 0.15s ease, transform 0.1s ease;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease,
+    color 0.15s ease;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
   text-decoration: none;
@@ -47,23 +52,38 @@ a.neo-btn--accent:visited {
   color: #fff;
 }
 
-.neo-btn:active:not(:disabled) {
-  box-shadow: var(--shadow-pressed);
-  transform: scale(0.98);
+.neo-btn:active:not(:disabled):not(.neo-btn--accent) {
+  transform: translateY(0) scale(0.99);
+  box-shadow: var(--btn-shadow-active);
 }
 
 .neo-btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: var(--shadow-raised);
 }
 
 .neo-btn--accent {
-  background: linear-gradient(145deg, #ff7a1a, var(--color-accent-dim));
+  background: var(--accent-cta-bg);
   color: #fff;
   font-weight: 600;
-  box-shadow:
-    var(--shadow-raised),
-    0 0 20px var(--color-accent-glow);
+  transform: translateY(var(--accent-cta-lift));
+  box-shadow: var(--accent-cta-shadow);
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease;
+}
+
+.neo-btn--accent:disabled {
+  transform: none;
+  box-shadow: none;
+}
+
+.neo-btn--accent:active:not(:disabled) {
+  transform: translateY(0) scale(0.99);
+  box-shadow: var(--accent-cta-shadow-active);
 }
 
 .neo-btn--icon {
