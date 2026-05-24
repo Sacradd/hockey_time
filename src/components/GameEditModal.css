@@ -1,9 +1,22 @@
+.app-confirm.game-edit-modal {
+  align-items: center;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding:
+    calc(var(--safe-top, 0px) + var(--space-md))
+    var(--space-lg)
+    calc(var(--safe-bottom, 0px) + var(--space-md));
+}
+
 .game-edit-modal__box {
   width: 100%;
   max-width: min(calc(100vw - 2 * var(--space-lg)), 17.5rem);
   max-height: none;
   overflow: visible;
   padding: var(--space-md);
+  margin: auto;
+  flex-shrink: 0;
   text-align: left;
   box-sizing: border-box;
 }

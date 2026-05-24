@@ -936,3 +936,103 @@ function db_sync_roster_to_game(PDO $pdo, int $rosterId, int $gameId): void
         $ins->execute([(int) $row['user_id'], $gameId]);
     }
 }
+
+function db_ensure_game_match_teams_table(PDO $pdo): void
+{
+    if (db_table_exists($pdo, 'game_match_teams')) {
+        return;
+    }
+
+    $pdo->exec(
+        "CREATE TABLE game_match_teams (
+          id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+          group_id INT UNSIGNED NOT NULL,
+          user_id INT UNSIGNED NOT NULL,
+          team ENUM('white','black') NOT NULL,
+          updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          PRIMARY KEY (id),
+          UNIQUE KEY uk_match_teams_user_group (user_id, group_id),
+          KEY idx_match_teams_group (group_id),
+          CONSTRAINT fk_match_teams_group FOREIGN KEY (group_id) REFERENCES day_groups (id) ON DELETE CASCADE,
+          CONSTRAINT fk_match_teams_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    );
+}
+
+/** @return list<int> */
+function db_in_game_lineup_user_ids(PDO $pdo, int $gameId, int $rosterId, array $game, array $viewer): array
+{
+    $lineup = db_compute_lineup($pdo, $gameId, $rosterId, $game, $viewer);
+    $ids = [];
+    foreach (['field_lineup', 'field_reserve', 'goalie_lineup', 'goalie_reserve'] as $key) {
+        foreach ($lineup[$key] as $member) {
+            $ids[(int) $member['user_id']] = true;
+        }
+    }
+
+    return array_keys($ids);
+}
+
+/** @return array<int, string> */
+function db_fetch_game_match_teams(PDO $pdo, int $gameId): array
+{
+    db_ensure_game_match_teams_table($pdo);
+
+    $stmt = $pdo->prepare('SELECT user_id, team FROM game_match_teams WHERE group_id = ?');
+    $stmt->execute([$gameId]);
+    $out = [];
+    while ($row = $stmt->fetch()) {
+        $team = (string) $row['team'];
+        if ($team === 'white' || $team === 'black') {
+            $out[(int) $row['user_id']] = $team;
+        }
+    }
+
+    return $out;
+}
+
+/**
+ * @param array<int|string, mixed> $assignments user_id => white|black
+ * @return array<int, string>
+ */
+function db_save_game_match_teams(
+    PDO $pdo,
+    int $gameId,
+    int $rosterId,
+    array $game,
+    array $viewer,
+    array $assignments
+): array {
+    db_ensure_game_match_teams_table($pdo);
+
+    $allowed = array_flip(db_in_game_lineup_user_ids($pdo, $gameId, $rosterId, $game, $viewer));
+    $normalized = [];
+    foreach ($assignments as $userIdRaw => $teamRaw) {
+        $userId = (int) $userIdRaw;
+        if ($userId < 1 || !isset($allowed[$userId])) {
+            continue;
+        }
+        $team = is_string($teamRaw) ? $teamRaw : '';
+        if ($team !== 'white' && $team !== 'black') {
+            continue;
+        }
+        $normalized[$userId] = $team;
+    }
+
+    $pdo->beginTransaction();
+    try {
+        $pdo->prepare('DELETE FROM game_match_teams WHERE group_id = ?')->execute([$gameId]);
+        $ins = $pdo->prepare(
+            'INSERT INTO game_match_teams (group_id, user_id, team) VALUES (?, ?, ?)'
+        );
+        foreach ($normalized as $userId => $team) {
+            $ins->execute([$gameId, $userId, $team]);
+        }
+        $pdo->commit();
+    } catch (Throwable $e) {
+        $pdo->rollBack();
+        throw $e;
+    }
+
+    return $normalized;
+}

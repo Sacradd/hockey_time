@@ -1,5 +1,5 @@
 /**
- * Импорт вручную подписанных превью из public/teams/_debug/*.jpg → public/teams/{slug}.png
+ * Импорт иконок из public/teams_new/*.jpg → public/teams/{slug}.png
  * Запуск: node scripts/import-khl-debug.mjs
  */
 import fs from 'fs'
@@ -8,10 +8,10 @@ import { fileURLToPath } from 'url'
 import sharp from 'sharp'
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
-const debugDir = path.join(root, 'public', 'teams', '_debug')
+const sourceDir = path.join(root, 'public', 'teams_new')
 const outDir = path.join(root, 'public', 'teams')
 
-/** Имя файла в _debug (без расширения) → slug в приложении */
+/** Имя файла (без расширения) → slug в приложении */
 const NAME_TO_SLUG = {
   amur: 'amur',
   avangard: 'avangard',
@@ -26,6 +26,7 @@ const NAME_TO_SLUG = {
   'dynamo-mn': 'dynamo-mn',
   dynamo_m: 'dynamo-m',
   'dynamo-m': 'dynamo-m',
+  dynamo: 'dynamo-m',
   kunlun: 'kunlun',
   lokomotiv: 'lokomotiv',
   metalurg: 'metallurg',
@@ -46,17 +47,17 @@ const NAME_TO_SLUG = {
 }
 
 async function main() {
-  if (!fs.existsSync(debugDir)) {
-    console.error('Нет папки public/teams/_debug')
+  if (!fs.existsSync(sourceDir)) {
+    console.error('Нет папки public/teams_new')
     process.exit(1)
   }
 
   const files = fs
-    .readdirSync(debugDir)
+    .readdirSync(sourceDir)
     .filter((f) => /\.(jpe?g|png|webp)$/i.test(f))
     .filter((f) => !/^\d+_/i.test(f) && f.toLowerCase() !== 'readme.txt')
   if (files.length === 0) {
-    console.error('В _debug нет картинок (только имена команд: amur.jpg, cska.jpg, …)')
+    console.error('В teams_new нет картинок (имена: amur.jpg, cska.jpg, …)')
     process.exit(1)
   }
 
@@ -68,7 +69,7 @@ async function main() {
       continue
     }
 
-    const src = path.join(debugDir, file)
+    const src = path.join(sourceDir, file)
     const dest = path.join(outDir, `${slug}.png`)
 
     await sharp(src)

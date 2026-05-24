@@ -25,7 +25,10 @@ export default defineConfig({
         description: 'Собираемся на хоккей',
         theme_color: '#1E1E1E',
         background_color: '#1E1E1E',
+        id: '/',
+        scope: '/',
         display: 'standalone',
+        display_override: ['standalone', 'fullscreen'],
         orientation: 'portrait',
         start_url: '/',
         icons: [

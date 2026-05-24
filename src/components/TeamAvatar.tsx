@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { getKhlTeam, teamIconUrl } from '@/data/khlTeams'
+import { getKhlTeam, teamIconUrl, teamLegacyIconUrl } from '@/data/khlTeams'
 import './TeamAvatar.css'
 
 interface TeamAvatarProps {
@@ -9,9 +9,11 @@ interface TeamAvatarProps {
   title?: string
 }
 
+type IconSource = 'primary' | 'legacy-png'
+
 export function TeamAvatar({ slug, size = 44, className = '', title }: TeamAvatarProps) {
   const team = getKhlTeam(slug)
-  const [useSvgFallback, setUseSvgFallback] = useState(false)
+  const [iconSource, setIconSource] = useState<IconSource>('primary')
   const [imgFailed, setImgFailed] = useState(false)
 
   const style = { width: size, height: size }
@@ -30,10 +32,8 @@ export function TeamAvatar({ slug, size = 44, className = '', title }: TeamAvata
     )
   }
 
-  const showImg = !imgFailed
-  const imgSrc = useSvgFallback
-    ? `/teams/${team.slug}.svg`
-    : teamIconUrl(team.slug)
+  const imgSrc =
+    iconSource === 'primary' ? teamIconUrl(team.slug) : teamLegacyIconUrl(team.slug)
 
   return (
     <div
@@ -42,14 +42,17 @@ export function TeamAvatar({ slug, size = 44, className = '', title }: TeamAvata
       title={label}
       aria-label={label}
     >
-      {showImg ? (
+      {!imgFailed ? (
         <img
           className="team-avatar__img"
           src={imgSrc}
           alt=""
           onError={() => {
-            if (!useSvgFallback) setUseSvgFallback(true)
-            else setImgFailed(true)
+            if (iconSource === 'primary') {
+              setIconSource('legacy-png')
+              return
+            }
+            setImgFailed(true)
           }}
         />
       ) : (

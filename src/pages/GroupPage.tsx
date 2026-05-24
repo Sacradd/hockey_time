@@ -877,6 +877,16 @@ export function GroupPage() {
               {paymentNotice}
             </p>
           )}
+          {game.payment_active && canManageLineup && (
+            <Button
+              type="button"
+              variant="accent"
+              className="vote-admin__teams-btn"
+              onClick={() => navigate(`/groups/${gameId}/teams`)}
+            >
+              Сформировать состав
+            </Button>
+          )}
         </section>
       )}
 

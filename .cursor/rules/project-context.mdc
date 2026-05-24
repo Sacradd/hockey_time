@@ -8,7 +8,8 @@ alwaysApply: true
 Перед задачами читай **AGENTS.md** и **docs/SPEC.md**.
 
 - PWA: React + Vite + TS, неоморфизм `#1E1E1E` / `#FF6B00`, логотип `public/emblem.jpeg`
-- GitHub: `Sacradd/hockey_time` | Dev: `npm.cmd run dev` | Деплой: `dist/` на reg.ru
-- Backend план: **PHP + MySQL**, push Web Push
-- Сейчас: экран входа готов, **API нет** | Следующий этап: **авторизация**
-- Разработка **по этапам**, не всё сразу | UI на русском | commit только по просьбе
+- GitHub: `Sacradd/hockey_time` | Dev: `npm.cmd run dev` | Деплой: `dist/` на reg.ru (HTTPS для PWA на iPhone)
+- Backend: **PHP + MySQL** (локально Laragon/Docker)
+- Этап **8** ✅: состав белые/чёрные (`GameTeamsPage`, `game_match_teams`); push — позже
+- PWA standalone на iPhone **только** после build + HTTPS; dev/LAN = Safari с панелями
+- Разработка **по этапам** | UI на русском | commit только по просьбе

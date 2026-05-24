@@ -58,4 +58,5 @@ export interface GameDetailResponse {
   my_vote: MyVote | null
   my_payment: MyPayment | null
   lineup: GameLineup
+  match_teams?: Record<string, 'white' | 'black'> | null
 }

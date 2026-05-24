@@ -22,7 +22,9 @@ PWA (сайт как приложение на телефоне) для **сво
 | С телефона (LAN) | Laragon **Start All**, затем `start_online.cmd` или `npm.cmd run dev:lan` → `http://IP-ПК:5173/` |
 | Локальный API + MySQL | Docker: см. [docs/LOCAL.md](docs/LOCAL.md) (`docker compose up -d`, `npm.cmd run local:install`) |
 | Сборка | `npm.cmd run build` → папка `dist/` |
-| Деплой | reg.ru: залить `dist/`; API позже PHP + MySQL на том же хостинге |
+| Деплой | reg.ru: залить `dist/`; API PHP + MySQL на том же хостинге |
+
+**PWA на iPhone:** полноэкранный режим (без панелей Safari) только после **`npm.cmd run build`** + деплой на **HTTPS**. Dev-сервер (`dev` / `dev:lan`) — это закладка Safari, не приложение. Установка: Safari → «Поделиться» → «На экран "Домой"» → открывать с иконки.
 
 **Windows:** в PowerShell использовать `npm.cmd`, не `npm` (политика выполнения скриптов). Альтернатива: `start-dev.cmd`.
 
@@ -33,7 +35,7 @@ PWA (сайт как приложение на телефоне) для **сво
 - **Frontend:** React 19, TypeScript, Vite 6, react-router-dom 7
 - **PWA:** vite-plugin-pwa (в dev отключён: `devOptions.enabled: false`)
 - **Стили:** CSS, неоморфизм, алиас `@/` → `src/`
-- **Backend:** пока **нет** (запланирован PHP + MySQL на reg.ru)
+- **Backend:** PHP + MySQL (локально Laragon/Docker; prod reg.ru)
 - **Push:** Web Push (HTTPS, service worker, подписки в БД, отправка с PHP)
 
 ## Дизайн
@@ -48,26 +50,29 @@ PWA (сайт как приложение на телефоне) для **сво
 - **Кнопки:** все `.neo-btn` / `Button` — приподнятый неоморф (`--btn-lift`, `--btn-shadow` в `tokens.css`); оранжевые — `variant="accent"` / `neo-btn--accent` (`--accent-cta-*`). Не дублировать тени в компонентах
 - **Название группы:** табличка `.roster-name-plate` (рамка, акцент, линии) — только страница управления группой (`RosterPage`); на главной карточки — простой текст
 - **Главная админа:** блоки «Группы» / «Игры»; создание группы — только название; карточки: «Кол-во участников N»; в «Играх» — предстоящие игры + активные голосование/оплата; подпись «Группа — …»
-- **Иконки КХЛ:** источник — `public/teams/_debug/{slug}.jpg` (имя = slug). В приложение: `npm.cmd run teams:import`. **Не** запускать `teams:slice` для продакшена (только черновик в `_slice_preview`, часто путает порядок).
+- **Иконки КХЛ (выбор команды):** приложение берёт **`public/teams_new/{slug}.jpg`** напрямую. Импорт в PNG (`npm.cmd run teams:import`) — запасной вариант для деплоя без JPG.
 
 ## Структура кода
 
 ```
 src/
-  App.tsx              # роуты: / и /login → LoginPage, /home → заглушка
-  pages/LoginPage.tsx  # экран входа (UI без API)
+  App.tsx              # роуты: /login, /home, /groups/:id, /groups/:id/teams
+  pages/LoginPage.tsx  # экран входа
   pages/HomePage.tsx   # главная: группы, игры
   pages/RosterPage.tsx # группа: игры, участники
-  pages/GroupPage.tsx  # игра: голосование, состав, оплата
-  components/GameEditModal.tsx, RosterEditModal.tsx, PositionPill.tsx, InfoHint.tsx, ConfirmDialog.tsx
-  components/
-    Emblem.tsx         # логотип
-    ui/Button.tsx, Input.tsx
-    layout/AppLayout.tsx
+  pages/GroupPage.tsx  # игра: голосование, состав, оплата, «Сформировать состав»
+  pages/GameTeamsPage.tsx  # белые/чёрные: живой блок + список игроков
+  components/GameEditModal.tsx, RosterEditModal.tsx, TeamAssignRow.tsx, …
+  lib/gameLineup.ts    # parseMatchTeams, buildTeamBoardSlots
+  components/layout/AppLayout.tsx  # app-shell--teams-form на /groups/:id/teams
   styles/              # global, tokens, neumorphic
 public/
-  emblem.jpeg          # основной логотип
-docs/SPEC.md           # бизнес-логика и этапы
+  teams_new/           # иконки КХЛ (JPG, основной источник)
+  emblem.jpeg
+api/
+  admin/save-match-teams.php
+  games/detail.php     # match_teams для админа
+docs/SPEC.md
 ```
 
 ## Бизнес-логика (кратко)
@@ -80,6 +85,7 @@ docs/SPEC.md           # бизнес-логика и этапы
 5. Админ может **удалить** из состава → пересчёт очереди.
 6. **Оплата:** админ «Требование об оплате» **параллельно с голосованием**; полевые подтверждают в приложении; админ видит **₽** (зелёный = оплатил) и может отметить вручную. **Вратари** — без оплаты. Push позже.
 7. **Гости** и **ручная очередь** (вставка без очереди) — только админ.
+8. **Состав на игру (белые/чёрные):** при активной оплате админ → «Сформировать состав» → `/groups/:id/teams`. Круги слева/справа, живой блок 11×2 (1 вр. + 10 пол.), сохранение в `game_match_teams`. Push и архив игры — позже.
 
 ## Этапы разработки (строго по порядку)
 
@@ -95,8 +101,15 @@ docs/SPEC.md           # бизнес-логика и этапы
 | 5 | Удаление из состава (свайп «выбыл») | ✅ в рамках игры |
 | 6 | Оплата | ✅ требование админом; подтверждение полевым; ₽ в составе; push позже |
 | 7 | Гости, ручная очередь | ✅ на экране игры |
+| 8 | Состав белые/чёрные на игру (`game_match_teams`) | ✅ UI + API; push позже |
 
 **Не делать всё сразу** — один этап за раз, согласованный с пользователем.
+
+## Известные ограничения / следующая сессия
+
+- Страница `/groups/:id/teams`: довести вёрстку (липкий блок, safe-area) на реальном iPhone после деплоя PWA.
+- `SuperUsersPanel.tsx`: ошибка TS `Timeout` — мешает `npm run build` (исправить перед prod-сборкой).
+- Push при назначении составов; закрытие/архив игры после рассылки — не реализовано.
 
 ## Правила для AI при работе в репозитории
 
@@ -116,6 +129,7 @@ roster_members  — roster_id, user_id
 day_groups      — roster_id, group_date, title, game_time, weekday, vote_*, payment_active, ...
 votes           — user_id, group_id, choice (1|2|3), voted_at
 payments        — user_id, group_id, paid_at
+game_match_teams — group_id, user_id, team (white|black)
 push_subscriptions — endpoint, keys, user_id
 ```
 (см. docs/ROSTERS-AND-VOTING.md; group_members/actual — этап миграции)

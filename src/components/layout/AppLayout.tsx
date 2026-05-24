@@ -11,13 +11,19 @@ export function AppLayout() {
 
   const showTopBar =
     !loading && !!user && !!token && !GUEST_PATHS.includes(pathname)
+  const hideProfileBar = /^\/groups\/\d+\/teams\/?$/.test(pathname)
+  const isTeamsFormPage = hideProfileBar
 
   return (
-    <div className={`app-shell${showTopBar ? ' app-shell--with-topbar' : ''}`}>
+    <div
+      className={`app-shell${showTopBar ? ' app-shell--with-topbar' : ''}${
+        isTeamsFormPage ? ' app-shell--teams-form' : ''
+      }`}
+    >
       {showTopBar && (
         <>
-          <UserProfileBar />
-          <PowerOffButton />
+          {!hideProfileBar && <UserProfileBar />}
+          {!isTeamsFormPage && <PowerOffButton />}
         </>
       )}
       <Outlet />

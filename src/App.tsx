@@ -5,6 +5,7 @@ import { AdminCreateUserPage } from '@/pages/AdminCreateUserPage'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { ActivatePage } from '@/pages/ActivatePage'
 import { AdminAddPlayerPage } from '@/pages/AdminAddPlayerPage'
+import { GameTeamsPage } from '@/pages/GameTeamsPage'
 import { GroupPage } from '@/pages/GroupPage'
 import { HomePage } from '@/pages/HomePage'
 import { LoginPage } from '@/pages/LoginPage'
@@ -96,6 +97,14 @@ export function App() {
             element={
               <RequireAuth>
                 <GroupPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/groups/:id/teams"
+            element={
+              <RequireAuth>
+                <GameTeamsPage />
               </RequireAuth>
             }
           />

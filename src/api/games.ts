@@ -1,10 +1,27 @@
 import { apiFetch } from '@/api/http'
+import type { MatchTeam } from '@/lib/gameLineup'
 import type { GameDetailResponse, GameLineup, GamePublic } from '@/types/games'
 
 export function fetchGameDetail(token: string, gameId: number) {
   return apiFetch<GameDetailResponse>(
     `/games/detail.php?game_id=${gameId}`,
     { method: 'GET', token }
+  )
+}
+
+/** Сохранить распределение по командам (можно частичное). */
+export function saveMatchTeams(
+  token: string,
+  gameId: number,
+  assignments: Record<number, MatchTeam>
+) {
+  return apiFetch<{ ok: boolean; match_teams: Record<string, MatchTeam> }>(
+    '/admin/save-match-teams.php',
+    {
+      method: 'POST',
+      token,
+      body: JSON.stringify({ game_id: gameId, assignments }),
+    }
   )
 }
 

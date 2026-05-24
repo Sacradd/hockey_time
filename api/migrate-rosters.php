@@ -156,6 +156,24 @@ try {
         'ALTER TABLE day_groups MODIFY roster_id INT UNSIGNED NOT NULL'
     );
 
+    if (!db_table_exists($pdo, 'game_match_teams')) {
+        $pdo->exec(
+            "CREATE TABLE game_match_teams (
+              id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+              group_id INT UNSIGNED NOT NULL,
+              user_id INT UNSIGNED NOT NULL,
+              team ENUM('white','black') NOT NULL,
+              updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+              PRIMARY KEY (id),
+              UNIQUE KEY uk_match_teams_user_group (user_id, group_id),
+              KEY idx_match_teams_group (group_id),
+              CONSTRAINT fk_match_teams_group FOREIGN KEY (group_id) REFERENCES day_groups (id) ON DELETE CASCADE,
+              CONSTRAINT fk_match_teams_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+        $steps[] = 'game_match_teams created';
+    }
+
     api_json_response(['ok' => true, 'message' => 'Миграция roster завершена', 'steps' => $steps]);
 } catch (Throwable $e) {
     api_json_response(['ok' => false, 'error' => $e->getMessage()], 500);

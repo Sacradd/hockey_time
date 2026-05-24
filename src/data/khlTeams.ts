@@ -5,7 +5,7 @@ export interface KhlTeam {
   color: string
 }
 
-/** Команды КХЛ (slug = имя файла в public/teams/) */
+/** Команды КХЛ (slug = имя файла иконки; источник: public/teams_new/) */
 export const KHL_TEAMS: KhlTeam[] = [
   { slug: 'amur', name: 'Амур', abbr: 'АМР', color: '#E03C31' },
   { slug: 'avangard', name: 'Авангард', abbr: 'АВГ', color: '#D2001F' },
@@ -38,6 +38,27 @@ export function getKhlTeam(slug: string | null | undefined): KhlTeam | null {
   return KHL_TEAMS.find((t) => t.slug === slug) ?? null
 }
 
+/** Slug → имя файла в public/teams_new/ (если отличается от slug) */
+const TEAM_NEW_FILE: Partial<Record<string, string>> = {
+  'dynamo-m': 'dynamo',
+}
+
+/** Команды без файла в teams_new — пока старый PNG в public/teams/ */
+const TEAMS_WITHOUT_NEW_ICON = new Set(['vityaz', 'kunlun'])
+
+/** URL иконки из public/teams_new/ (основной источник для выбора команды) */
+export function teamNewIconUrl(slug: string): string | null {
+  if (TEAMS_WITHOUT_NEW_ICON.has(slug)) return null
+  const file = TEAM_NEW_FILE[slug] ?? slug
+  return `/teams_new/${file}.jpg`
+}
+
+/** Основной URL иконки команды */
 export function teamIconUrl(slug: string): string {
+  return teamNewIconUrl(slug) ?? `/teams/${slug}.png`
+}
+
+/** Запасной PNG после импорта (teams:import), без SVG */
+export function teamLegacyIconUrl(slug: string): string {
   return `/teams/${slug}.png`
 }

@@ -45,6 +45,11 @@ try {
 
     $lineup = db_compute_lineup($pdo, $gameId, $rosterId, $game, $user);
 
+    $matchTeams = null;
+    if ($canManage) {
+        $matchTeams = db_fetch_game_match_teams($pdo, $gameId);
+    }
+
     api_json_response([
         'ok' => true,
         'game' => $public,
@@ -53,6 +58,7 @@ try {
             : null,
         'my_payment' => $myPayment ? ['paid_at' => $myPayment['paid_at']] : null,
         'lineup' => $lineup,
+        'match_teams' => $matchTeams,
     ]);
 } catch (Throwable $e) {
     api_handle_exception($e);

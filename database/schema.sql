@@ -113,4 +113,17 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
   CONSTRAINT fk_push_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS game_match_teams (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  group_id INT UNSIGNED NOT NULL,
+  user_id INT UNSIGNED NOT NULL,
+  team ENUM('white', 'black') NOT NULL,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_match_teams_user_group (user_id, group_id),
+  KEY idx_match_teams_group (group_id),
+  CONSTRAINT fk_match_teams_group FOREIGN KEY (group_id) REFERENCES day_groups (id) ON DELETE CASCADE,
+  CONSTRAINT fk_match_teams_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 SET FOREIGN_KEY_CHECKS = 1;
