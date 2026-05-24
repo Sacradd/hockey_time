@@ -16,4 +16,13 @@ return [
     'install_secret' => 'замените-на-случайную-строку',
     /** Подпись токенов входа (локально можно local-dev-secret) */
     'token_secret' => 'замените-на-случайную-строку',
+    /**
+     * Web Push (VAPID). Ключи: npm run generate-vapid или web-push generate-vapid-keys
+     * subject — mailto: или https:// URL сайта
+     */
+    // 'vapid' => [
+    //     'public_key' => '',
+    //     'private_key' => '',
+    //     'subject' => 'mailto:admin@example.com',
+    // ],
 ];

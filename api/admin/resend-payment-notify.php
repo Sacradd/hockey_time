@@ -24,36 +24,25 @@ try {
         api_json_response(['ok' => false, 'error' => 'Игра не найдена'], 404);
     }
 
+    if (!(bool) ($game['payment_active'] ?? false)) {
+        api_json_response(['ok' => false, 'error' => 'Оплата для этой игры не запрошена'], 400);
+    }
+
     $rosterId = (int) $game['roster_id'];
     $viewer = api_require_roster_admin($rosterId);
 
-    if (!(bool) ($game['vote_active'] ?? false)) {
-        api_json_response(['ok' => false, 'error' => 'Сначала запустите голосование'], 400);
-    }
-
-    $pdo->beginTransaction();
-
-    $pdo->prepare(
-        'UPDATE day_groups SET payment_active = 0 WHERE roster_id = ? AND id != ?'
-    )->execute([$rosterId, $gameId]);
-
-    $pdo->prepare(
-        'UPDATE day_groups SET payment_active = 1 WHERE id = ?'
-    )->execute([$gameId]);
-
-    $pdo->commit();
-
-    $game = db_fetch_game($pdo, $gameId);
+    $stats = db_field_lineup_payment_stats($pdo, $gameId, $rosterId, $game, $viewer);
     $notify = push_notify_game_payment($pdo, $gameId, $game, $viewer);
+    $message = payment_notify_admin_message($stats, $notify);
+    $noticeKind = ($stats['unpaid_count'] ?? 0) === 0 ? 'success' : 'info';
 
     api_json_response([
         'ok' => true,
-        'game' => api_game_public($game, $viewer, true),
         'notify' => $notify,
+        'stats' => $stats,
+        'message' => $message,
+        'notice_kind' => $noticeKind,
     ]);
 } catch (Throwable $e) {
-    if (isset($pdo) && $pdo->inTransaction()) {
-        $pdo->rollBack();
-    }
     api_handle_exception($e);
 }

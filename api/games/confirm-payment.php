@@ -38,6 +38,10 @@ try {
         api_json_response(['ok' => false, 'error' => 'Для вратарей оплата не требуется'], 400);
     }
 
+    if (!db_user_in_field_lineup($pdo, $gameId, $rosterId, $game, $user, $userId)) {
+        api_json_response(['ok' => false, 'error' => 'Оплата только для игроков в основе'], 400);
+    }
+
     $existing = $pdo->prepare(
         'SELECT paid_at FROM payments WHERE user_id = ? AND group_id = ? LIMIT 1'
     );

@@ -36,6 +36,10 @@ try {
         api_json_response(['ok' => false, 'error' => 'Для вратарей оплата не требуется'], 400);
     }
 
+    if (!db_user_in_field_lineup($pdo, $gameId, $rosterId, $game, $viewer, $userId)) {
+        api_json_response(['ok' => false, 'error' => 'Оплата только для игроков в основе'], 400);
+    }
+
     $memberStmt = $pdo->prepare(
         'SELECT 1 FROM roster_members WHERE roster_id = ? AND user_id = ? LIMIT 1'
     );

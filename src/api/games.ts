@@ -105,6 +105,32 @@ export function startPayment(token: string, gameId: number) {
   })
 }
 
+export type PaymentNotifyResult = {
+  targets: number
+  sent_users: number
+  sent_subscriptions: number
+  push_enabled: boolean
+  payable_count?: number
+  unpaid_count?: number
+}
+
+/** Повторно уведомить полевых без оплаты (push). */
+export function resendPaymentNotify(token: string, gameId: number) {
+  return apiFetch<{
+    ok: boolean
+    message: string
+    notice_kind: 'success' | 'info'
+    notify: PaymentNotifyResult
+  }>(
+    '/admin/resend-payment-notify.php',
+    {
+      method: 'POST',
+      token,
+      body: JSON.stringify({ game_id: gameId }),
+    }
+  )
+}
+
 /** Убрать из «еду»: голос → «не еду», резерв пересчитывается по времени голоса. */
 export function markPlayerNotGoing(token: string, gameId: number, userId: number) {
   return apiFetch<{ ok: boolean; lineup: GameLineup }>('/admin/mark-not-going.php', {

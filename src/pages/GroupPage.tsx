@@ -10,6 +10,7 @@ import {
   markPlayerInLineup,
   markPlayerNotGoing,
   markPlayerPayment,
+  resendPaymentNotify,
   setLineupQueuePosition,
   startPayment,
   startVote,
@@ -38,23 +39,6 @@ import type {
 } from '@/types/games'
 import type { RosterMember } from '@/types/groups'
 import './Groups.css'
-
-function findMyLineupMember(
-  lineup: GameLineup,
-  userId: number
-): LineupMember | undefined {
-  const all = [
-    ...lineup.field_lineup,
-    ...lineup.field_reserve,
-    ...lineup.field_declined,
-    ...lineup.field_pending,
-    ...lineup.goalie_lineup,
-    ...lineup.goalie_reserve,
-    ...lineup.goalie_declined,
-    ...lineup.goalie_pending,
-  ]
-  return all.find((m) => m.user_id === userId)
-}
 
 function findMyLineupStatus(
   lineup: GameLineup,
@@ -231,19 +215,6 @@ function LineupSection({
               </div>
             )
 
-            if (showQueueAdmin && onRemove) {
-              return (
-                <MemberSwipeRow
-                  key={m.user_id}
-                  variant="danger"
-                  removeLabel={m.is_guest ? 'Удалить' : 'Выбыл'}
-                  onRemove={() => onRemove(m)}
-                >
-                  {row}
-                </MemberSwipeRow>
-              )
-            }
-
             if (onRestore) {
               return (
                 <MemberSwipeRow
@@ -251,6 +222,19 @@ function LineupSection({
                   variant="success"
                   removeLabel="В состав"
                   onRemove={() => onRestore(m)}
+                >
+                  {row}
+                </MemberSwipeRow>
+              )
+            }
+
+            if (showQueueAdmin && onRemove) {
+              return (
+                <MemberSwipeRow
+                  key={m.user_id}
+                  variant="danger"
+                  removeLabel={m.is_guest ? 'Удалить' : 'Выбыл'}
+                  onRemove={() => onRemove(m)}
                 >
                   {row}
                 </MemberSwipeRow>
@@ -286,6 +270,10 @@ export function GroupPage() {
   const [showStart, setShowStart] = useState(false)
   const [startVoteConfirmOpen, setStartVoteConfirmOpen] = useState(false)
   const [adminPaymentConfirmOpen, setAdminPaymentConfirmOpen] = useState(false)
+  const [resendPaymentConfirmOpen, setResendPaymentConfirmOpen] = useState(false)
+  const [resendPaymentBusy, setResendPaymentBusy] = useState(false)
+  const [paymentNotice, setPaymentNotice] = useState('')
+  const [paymentNoticeKind, setPaymentNoticeKind] = useState<'success' | 'info'>('info')
   const [playerPaymentConfirmOpen, setPlayerPaymentConfirmOpen] = useState(false)
   const [paymentBusy, setPaymentBusy] = useState(false)
   const [markPaymentTarget, setMarkPaymentTarget] = useState<LineupMember | null>(null)
@@ -569,6 +557,7 @@ export function GroupPage() {
     setAdminBusy(true)
     setAdminPaymentConfirmOpen(false)
     setError('')
+    setPaymentNotice('')
     try {
       const res = await startPayment(token, gameId)
       setGame(res.game)
@@ -579,6 +568,27 @@ export function GroupPage() {
       )
     } finally {
       setAdminBusy(false)
+    }
+  }
+
+  async function handleResendPaymentNotify() {
+    if (!token || resendPaymentBusy) return
+    setResendPaymentBusy(true)
+    setError('')
+    setPaymentNotice('')
+    setPaymentNoticeKind('info')
+    try {
+      const res = await resendPaymentNotify(token, gameId)
+      setResendPaymentConfirmOpen(false)
+      setPaymentNotice(res.message)
+      setPaymentNoticeKind(res.notice_kind)
+      load()
+    } catch (err) {
+      setError(
+        err instanceof ApiError ? err.message : 'Не удалось отправить уведомление'
+      )
+    } finally {
+      setResendPaymentBusy(false)
     }
   }
 
@@ -650,9 +660,8 @@ export function GroupPage() {
     user && lineup ? findMyLineupStatus(lineup, user.id) : null
   const canManageLineup = !!game?.can_manage
   const showPaymentBadge = canManageLineup && !!game?.payment_active
-  const myLineupMember =
-    user && lineup ? findMyLineupMember(lineup, user.id) : undefined
-  const isFieldPlayer = (myLineupMember?.position ?? user?.position) !== 'goalie'
+  const inFieldLineup =
+    !!user && !!lineup && lineup.field_lineup.some((m) => m.user_id === user.id)
   const inFieldQueue = new Set(
     lineup
       ? [...lineup.field_lineup, ...lineup.field_reserve].map((m) => m.user_id)
@@ -661,15 +670,21 @@ export function GroupPage() {
   const addablePlayers = rosterMembers.filter(
     (m) => m.position !== 'goalie' && !inFieldQueue.has(m.user_id)
   )
-  const lineupAdminProps = canManageLineup
+  const lineupAdminPropsBase = canManageLineup
     ? {
         showQueueAdmin: true as const,
         onRemove: (m: LineupMember) => setRemoveTarget(m),
         onPositionClick: handlePositionClick,
+      }
+    : null
+  const lineupAdminProps = lineupAdminPropsBase
+    ? {
+        ...lineupAdminPropsBase,
         showPaymentBadge,
         onPaymentClick: (m: LineupMember) => setMarkPaymentTarget(m),
       }
     : { showPaymentBadge: false as const }
+  const lineupAdminPropsNoPayment = lineupAdminPropsBase ?? { showPaymentBadge: false as const }
 
   return (
     <div className="groups-page groups-page--game">
@@ -737,7 +752,7 @@ export function GroupPage() {
         <p className="groups-page__empty">Голосование закрыто</p>
       )}
 
-      {!loading && game?.payment_active && !game.can_manage && isFieldPlayer && !myPayment && (
+      {!loading && game?.payment_active && !game.can_manage && inFieldLineup && !myPayment && (
         <section className="payment-panel">
           <Button
             variant="accent"
@@ -750,7 +765,7 @@ export function GroupPage() {
         </section>
       )}
 
-      {!loading && game?.payment_active && !game.can_manage && isFieldPlayer && myPayment && (
+      {!loading && game?.payment_active && !game.can_manage && inFieldLineup && myPayment && (
         <p className="my-game-status neo-surface my-game-status--success">
           Оплата подтверждена
         </p>
@@ -815,8 +830,51 @@ export function GroupPage() {
             </Button>
           )}
           {game.payment_active && (
-            <p className="groups-page__user vote-admin__status">
-              Требование об оплате отправлено
+            <div className="vote-admin__payment-sent">
+              <p className="groups-page__user vote-admin__status">
+                Требование об оплате отправлено
+              </p>
+              <button
+                type="button"
+                className="payment-resend-btn"
+                aria-label="Отправить повторно уведомление об оплате"
+                title="Отправить повторно"
+                disabled={resendPaymentBusy}
+                onClick={() => setResendPaymentConfirmOpen(true)}
+              >
+                <svg
+                  className="payment-resend-btn__icon"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M4 4v5h5M20 20v-5h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M20 9A8 8 0 004.34 7.34L4 9M4 15a8 8 0 0015.66 2.66L20 15"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+            </div>
+          )}
+          {paymentNotice && (
+            <p
+              className={`vote-admin__notice${
+                paymentNoticeKind === 'success' ? ' vote-admin__notice--success' : ''
+              }`}
+              role="status"
+            >
+              {paymentNotice}
             </p>
           )}
         </section>
@@ -840,7 +898,7 @@ export function GroupPage() {
         open={restoreTarget !== null}
         message={
           restoreTarget
-            ? `Вернуть ${restoreTarget.name} в состав? Место в очереди — по времени занесения.`
+            ? `Точно вернуть в состав ${restoreTarget.name}?`
             : ''
         }
         onConfirm={() => void handleConfirmRestore()}
@@ -866,6 +924,15 @@ export function GroupPage() {
         busy={adminBusy}
         onConfirm={() => void handleStartPayment()}
         onCancel={() => !adminBusy && setAdminPaymentConfirmOpen(false)}
+      />
+
+      <ConfirmDialog
+        open={resendPaymentConfirmOpen}
+        message="Отправить повторно уведомление об оплате?"
+        titleId="resend-payment-confirm-title"
+        busy={resendPaymentBusy}
+        onConfirm={() => void handleResendPaymentNotify()}
+        onCancel={() => !resendPaymentBusy && setResendPaymentConfirmOpen(false)}
       />
 
       <ConfirmDialog
@@ -1100,13 +1167,12 @@ export function GroupPage() {
             title="Резерв · полевые"
             members={lineup.field_reserve}
             emptyHint="Резерв пуст"
-            {...lineupAdminProps}
+            {...lineupAdminPropsNoPayment}
           />
           <LineupSection
             title="Не едут"
             members={lineup.field_declined}
             onRestore={canManageLineup ? (m) => setRestoreTarget(m) : undefined}
-            {...lineupAdminProps}
           />
           <LineupSection
             title="Не едут · вратари"
@@ -1116,7 +1182,7 @@ export function GroupPage() {
           <LineupSection
             title="Ещё не ответили"
             members={[...lineup.field_pending, ...lineup.goalie_pending]}
-            {...lineupAdminProps}
+            {...lineupAdminPropsNoPayment}
           />
         </>
       )}

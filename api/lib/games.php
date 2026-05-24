@@ -196,7 +196,7 @@ function db_lineup_attach_payment_flags(
     }
 
     $paidIds = db_fetch_game_paid_user_ids($pdo, $gameId);
-    foreach (['field_lineup', 'field_reserve', 'field_declined', 'field_pending'] as $key) {
+    foreach (['field_lineup', 'field_declined', 'field_pending'] as $key) {
         foreach ($lineup[$key] as $i => $item) {
             if (($item['position'] ?? 'player') !== 'player') {
                 continue;
@@ -405,6 +405,108 @@ function db_compute_lineup(PDO $pdo, int $gameId, int $rosterId, array $game, ar
     ];
 
     return db_lineup_attach_payment_flags($pdo, $gameId, $rosterId, $game, $viewer, $lineup);
+}
+
+/**
+ * Кто должен платить: только полевые в основе (не резерв, не вратари).
+ * Оплата = запись в payments для этой игры.
+ *
+ * @return array{
+ *   payable_count: int,
+ *   unpaid_count: int,
+ *   unpaid_user_ids: list<int>,
+ *   paid_user_ids: list<int>
+ * }
+ */
+function db_field_lineup_payment_stats(
+    PDO $pdo,
+    int $gameId,
+    int $rosterId,
+    array $game,
+    array $viewer
+): array {
+    $lineup = db_compute_lineup($pdo, $gameId, $rosterId, $game, $viewer);
+    $paidMap = db_fetch_game_paid_user_ids($pdo, $gameId);
+    $unpaid = [];
+    $paid = [];
+
+    foreach ($lineup['field_lineup'] as $member) {
+        if (($member['position'] ?? 'player') === 'goalie') {
+            continue;
+        }
+        $userId = (int) $member['user_id'];
+        if (isset($paidMap[$userId])) {
+            $paid[] = $userId;
+            continue;
+        }
+        $unpaid[] = $userId;
+    }
+
+    return [
+        'payable_count' => count($paid) + count($unpaid),
+        'unpaid_count' => count($unpaid),
+        'unpaid_user_ids' => $unpaid,
+        'paid_user_ids' => $paid,
+    ];
+}
+
+/** @return list<int> */
+function db_unpaid_field_go_user_ids(
+    PDO $pdo,
+    int $gameId,
+    int $rosterId,
+    array $game,
+    array $viewer
+): array {
+    return db_field_lineup_payment_stats($pdo, $gameId, $rosterId, $game, $viewer)['unpaid_user_ids'];
+}
+
+/** Сообщение для админа после рассылки / повторной рассылки. */
+function payment_notify_admin_message(array $stats, array $notify): string
+{
+    $payable = (int) ($stats['payable_count'] ?? 0);
+    $unpaid = (int) ($stats['unpaid_count'] ?? 0);
+    $sent = (int) ($notify['sent_users'] ?? 0);
+    $pushEnabled = (bool) ($notify['push_enabled'] ?? false);
+
+    if ($payable === 0) {
+        return 'В основе нет полевых — оплата и напоминания только для них (вратари не платят)';
+    }
+
+    if ($unpaid === 0) {
+        return 'Все полевые в основе уже оплатили — повторная рассылка не нужна';
+    }
+
+    if ($pushEnabled) {
+        return sprintf(
+            'Повторно уведомлены %d из %d (только без оплаты)',
+            $sent,
+            $unpaid
+        );
+    }
+
+    return sprintf(
+        'Без оплаты в основе: %d (настройте VAPID в config.local.php для push)',
+        $unpaid
+    );
+}
+
+function db_user_in_field_lineup(
+    PDO $pdo,
+    int $gameId,
+    int $rosterId,
+    array $game,
+    array $viewer,
+    int $userId
+): bool {
+    $lineup = db_compute_lineup($pdo, $gameId, $rosterId, $game, $viewer);
+    foreach ($lineup['field_lineup'] as $member) {
+        if ((int) $member['user_id'] === $userId) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 /** @param array<string, mixed> $a
