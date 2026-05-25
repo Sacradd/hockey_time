@@ -24,10 +24,14 @@ try {
         api_json_response(['ok' => false, 'error' => 'Игра не найдена'], 404);
     }
 
-    if ((bool) ($game['teams_published'] ?? false)) {
+    if (!empty($game['archived_at'])) {
+        api_json_response(['ok' => true, 'archived' => true, 'roster_id' => (int) $game['roster_id']]);
+    }
+
+    if (!(bool) ($game['teams_published'] ?? false)) {
         api_json_response([
             'ok' => false,
-            'error' => 'Составы опубликованы — отправьте игру в архив',
+            'error' => 'Составы ещё не опубликованы — игру можно удалить',
         ],
         400);
     }
@@ -35,11 +39,11 @@ try {
     $rosterId = (int) $game['roster_id'];
     api_require_roster_admin($rosterId);
 
-    $pdo->prepare('DELETE FROM day_groups WHERE id = ?')->execute([$gameId]);
+    db_archive_game($pdo, $gameId);
 
     api_json_response([
         'ok' => true,
-        'deleted' => true,
+        'archived' => true,
         'roster_id' => $rosterId,
     ]);
 } catch (Throwable $e) {

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { addMember, createPlayer, searchPlayers } from '@/api/admin'
 import { ApiError } from '@/api/http'
 import { PositionPill } from '@/components/PositionPill'
@@ -143,10 +143,6 @@ export function AdminAddPlayerPage() {
 
   return (
     <div className="groups-page">
-      <Link to={`/rosters/${rosterId}`} className="neo-btn groups-page__back">
-        ← Назад
-      </Link>
-
       <h1 className="groups-page__title">Добавить в группу</h1>
 
       <div className="add-player-tabs">

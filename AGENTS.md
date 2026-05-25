@@ -108,15 +108,15 @@ docs/SPEC.md
 ## Известные ограничения / следующая сессия
 
 - **Деплой:** [docs/DEPLOY.md](docs/DEPLOY.md) — чеклист reg.ru + HTTPS.
-- `SuperUsersPanel.tsx`: ошибка TS `Timeout` — мешает `npm run build` (исправить перед prod-сборкой).
 - **Push:** подписка в PWA + SW + рассылка при старте голосования (бэкенд оплаты частично готов).
-- Закрытие/архив игры после публикации составов — не реализовано.
+- **Инструкция пользователям:** [docs/USER-GUIDE.md](docs/USER-GUIDE.md) — текст готов; скриншоты в `docs/screenshots/` (нужны с телефона).
 
 ## Недавние доработки UI (этап 8+)
 
-- Голосование не запущено / «Буду»·«Не буду» (вместо «Еду»·«Не еду»).
-- Pull-to-refresh на странице игры (без polling).
-- «Сформировать состав»: копирование в 2 колонки, кнопка **Готово** → у всех экран только составы (`teams_published`).
+- Голосование не запущено / «Буду»·«Не буду»; pull-to-refresh на странице игры.
+- Составы: **Готово** → `teams_published`; у игроков «Вы в команде …» (белые/чёрные цвета).
+- Главная: бейдж **«Составы сформированы»**; свайп по игре — **Удалить** / **В архив** (`archived_at`).
+- Шапка: **Назад** + выкл справа; профиль → группа — компактный список, ампула справа (полевой зелёный, вратарь оранжевый).
 
 ## Правила для AI при работе в репозитории
 
@@ -133,7 +133,7 @@ docs/SPEC.md
 users           — phone, password_hash, display_login, role, position (player|goalie), ...
 rosters         — title, venue, weekday (Среда·Кристалл, …)
 roster_members  — roster_id, user_id
-day_groups      — roster_id, group_date, title, vote_*, payment_active, teams_published, ...
+day_groups      — roster_id, group_date, title, vote_*, payment_active, teams_published, archived_at, ...
 votes           — user_id, group_id, choice (1|2|3), voted_at
 payments        — user_id, group_id, paid_at
 game_match_teams — group_id, user_id, team (white|black)

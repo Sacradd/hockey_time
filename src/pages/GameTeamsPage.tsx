@@ -3,39 +3,13 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { fetchGameDetail, publishMatchTeams, saveMatchTeams } from '@/api/games'
 import { ApiError } from '@/api/http'
 import { MatchTeamsBoard } from '@/components/MatchTeamsBoard'
-import { PowerOffButton } from '@/components/PowerOffButton'
 import { TeamAssignRow } from '@/components/TeamAssignRow'
 import { Button } from '@/components/ui/Button'
+import { useRegisterAppBack } from '@/context/AppBackContext'
 import { useAuth } from '@/context/AuthContext'
 import { collectInGameLineupMembers, parseMatchTeams, type MatchTeam } from '@/lib/gameLineup'
 import type { GameLineup } from '@/types/games'
 import './Groups.css'
-
-function TeamsToolbar({
-  saving,
-  loading,
-  onBack,
-  backLabel,
-}: {
-  saving: boolean
-  loading: boolean
-  onBack: () => void
-  backLabel?: string
-}) {
-  return (
-    <div className="game-teams-toolbar">
-      <button
-        type="button"
-        className="neo-btn game-teams-topbar"
-        onClick={onBack}
-        disabled={loading || saving}
-      >
-        {backLabel ?? (saving ? 'Сохранение…' : '← К игре')}
-      </button>
-      <PowerOffButton />
-    </div>
-  )
-}
 
 export function GameTeamsPage() {
   const { id } = useParams()
@@ -90,7 +64,7 @@ export function GameTeamsPage() {
     setTeams((prev) => ({ ...prev, [userId]: team }))
   }
 
-  async function handleBack() {
+  const handleBack = useCallback(async () => {
     if (!token || saving) return
     setSaving(true)
     setError('')
@@ -101,7 +75,17 @@ export function GameTeamsPage() {
       setError(err instanceof ApiError ? err.message : 'Не удалось сохранить составы')
       setSaving(false)
     }
-  }
+  }, [token, saving, gameId, teams, navigate])
+
+  useRegisterAppBack(
+    useMemo(
+      () => ({
+        onBack: () => void handleBack(),
+        disabled: loading || saving,
+      }),
+      [handleBack, loading, saving]
+    )
+  )
 
   async function handleDone() {
     if (!token || saving) return
@@ -116,14 +100,8 @@ export function GameTeamsPage() {
     }
   }
 
-  const showToolbar = loading || !!error || members.length === 0
-
   return (
     <div className="groups-page groups-page--game groups-page--teams">
-      {showToolbar && (
-        <TeamsToolbar saving={saving} loading={loading} onBack={handleBack} />
-      )}
-
       {loading && <p className="groups-page__empty game-teams-page__status">Загрузка…</p>}
       {error && <p className="groups-page__error game-teams-page__status">{error}</p>}
 
@@ -134,7 +112,6 @@ export function GameTeamsPage() {
       {!loading && members.length > 0 && (
         <div className="game-teams-body">
           <div className="game-teams-scroll">
-            <TeamsToolbar saving={saving} loading={loading} onBack={handleBack} />
             <MatchTeamsBoard
               whiteMembers={whiteMembers}
               blackMembers={blackMembers}

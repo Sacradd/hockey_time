@@ -127,6 +127,13 @@ try {
         $steps[] = 'day_groups.teams_published added';
     }
 
+    if (!db_column_exists($pdo, 'day_groups', 'archived_at')) {
+        $pdo->exec(
+            'ALTER TABLE day_groups ADD COLUMN archived_at DATETIME NULL DEFAULT NULL AFTER teams_published'
+        );
+        $steps[] = 'day_groups.archived_at added';
+    }
+
     if (!db_column_exists($pdo, 'votes', 'choice')) {
         $pdo->exec('ALTER TABLE votes ADD COLUMN choice TINYINT UNSIGNED NOT NULL DEFAULT 1');
         $steps[] = 'votes.choice added';

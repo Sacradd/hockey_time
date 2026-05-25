@@ -5,6 +5,7 @@ import {
   addGuestToQueue,
   castVote,
   confirmPayment,
+  archiveGame,
   deleteGame,
   fetchGameDetail,
   markPlayerInLineup,
@@ -319,6 +320,7 @@ export function GroupPage() {
   const [showAddToQueue, setShowAddToQueue] = useState(false)
   const [gameEditOpen, setGameEditOpen] = useState(false)
   const [deleteGameConfirmOpen, setDeleteGameConfirmOpen] = useState(false)
+  const [archiveGameConfirmOpen, setArchiveGameConfirmOpen] = useState(false)
   const [gameEditBusy, setGameEditBusy] = useState(false)
   const [gameEditError, setGameEditError] = useState('')
   const [editTitle, setEditTitle] = useState('')
@@ -685,6 +687,23 @@ export function GroupPage() {
     }
   }
 
+  async function handleConfirmArchiveGame() {
+    if (!token || !game || gameEditBusy) return
+    setGameEditBusy(true)
+    setError('')
+    try {
+      await archiveGame(token, gameId)
+      setArchiveGameConfirmOpen(false)
+      setGameEditOpen(false)
+      navigate('/home', { replace: true })
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Не удалось отправить в архив')
+      setArchiveGameConfirmOpen(false)
+    } finally {
+      setGameEditBusy(false)
+    }
+  }
+
   const teamsPublished = !!game?.teams_published
   const publishedMembers = useMemo(
     () => (lineup ? collectInGameLineupMembers(lineup) : []),
@@ -761,10 +780,6 @@ export function GroupPage() {
       disabled={pullRefreshDisabled}
     >
     <div className="groups-page groups-page--game">
-      <Link to="/home" className="neo-btn groups-page__back">
-        ← На главную
-      </Link>
-
       {game && (
         <header className="groups-page__header">
           <div className="groups-page__title-row">
@@ -817,9 +832,16 @@ export function GroupPage() {
 
       {!loading && teamsPublished && lineup && (
         <section className="game-published-section">
-          <h2 className="groups-section-title">Составы на игру</h2>
           {myPublishedStatus && (
-            <p className={`my-game-status neo-surface ${myPublishedTeam ? 'my-game-status--ok' : 'my-game-status--muted'}`}>
+            <p
+              className={`my-game-status neo-surface${
+                myPublishedTeam === 'white'
+                  ? ' my-game-status--team-white'
+                  : myPublishedTeam === 'black'
+                    ? ' my-game-status--team-black'
+                    : ' my-game-status--muted'
+              }`}
+            >
               {myPublishedStatus}
             </p>
           )}
@@ -1088,7 +1110,18 @@ export function GroupPage() {
         onWeekdayChange={setEditWeekday}
         onSave={() => void handleSaveGameEdit()}
         onClose={closeGameEdit}
+        teamsPublished={teamsPublished}
         onDeleteClick={() => setDeleteGameConfirmOpen(true)}
+        onArchiveClick={() => setArchiveGameConfirmOpen(true)}
+      />
+
+      <ConfirmDialog
+        open={archiveGameConfirmOpen}
+        message="Отправить игру в архив? Она пропадёт из списка."
+        titleId="archive-game-confirm-title"
+        busy={gameEditBusy}
+        onConfirm={() => void handleConfirmArchiveGame()}
+        onCancel={() => !gameEditBusy && setArchiveGameConfirmOpen(false)}
       />
 
       <ConfirmDialog

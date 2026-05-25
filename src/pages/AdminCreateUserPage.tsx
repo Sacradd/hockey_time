@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
 import { createUser } from '@/api/admin'
 import { ApiError } from '@/api/http'
 import { Button } from '@/components/ui/Button'
@@ -59,10 +58,6 @@ export function AdminCreateUserPage() {
 
   return (
     <div className="groups-page">
-      <Link to="/home" className="neo-btn groups-page__back">
-        ← На главную
-      </Link>
-
       <h1 className="groups-page__title">Новый игрок</h1>
 
       <form className="login-page__form" onSubmit={handleSubmit}>

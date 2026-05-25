@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
-const REVEAL_PX = 92
+const DEFAULT_REVEAL_PX = 92
 const THRESHOLD = 44
 const BLOCK_THRESHOLD = 28
 /** Задержка перед закрытием по тапу снаружи (Safari: ghost click после свайпа) */
@@ -18,8 +18,10 @@ type Props = {
   blockSwipe?: boolean
   jokeOpen?: boolean
   jokeMessage?: string
-  /** danger — красный фон (выбыл); success — зелёный (в состав) */
-  variant?: 'danger' | 'success'
+  /** danger — красный; success — зелёный; archive — в архив */
+  variant?: 'danger' | 'success' | 'archive'
+  revealPx?: number
+  className?: string
 }
 
 export function MemberSwipeRow({
@@ -32,7 +34,10 @@ export function MemberSwipeRow({
   jokeOpen = false,
   jokeMessage,
   variant = 'danger',
+  revealPx = DEFAULT_REVEAL_PX,
+  className = '',
 }: Props) {
+  const threshold = Math.min(THRESHOLD, Math.floor(revealPx * 0.48))
   const [offset, setOffset] = useState(0)
   const offsetRef = useRef(0)
   const startX = useRef(0)
@@ -54,14 +59,14 @@ export function MemberSwipeRow({
   function updateDrag(clientX: number) {
     const dx = clientX - startX.current
     if (blockSwipe) {
-      offsetRef.current = dx > 0 ? 0 : Math.max(dx, -REVEAL_PX)
+      offsetRef.current = dx > 0 ? 0 : Math.max(dx, -revealPx)
       return
     }
     if (dx > 0) {
       applyOffset(0)
       return
     }
-    applyOffset(Math.max(dx, -REVEAL_PX))
+    applyOffset(Math.max(dx, -revealPx))
   }
 
   function finishDrag() {
@@ -69,8 +74,8 @@ export function MemberSwipeRow({
     pointerIdRef.current = null
     if (disabled) return
 
-    const threshold = blockSwipe ? BLOCK_THRESHOLD : THRESHOLD
-    const revealed = offsetRef.current < -threshold
+    const swipeThreshold = blockSwipe ? BLOCK_THRESHOLD : threshold
+    const revealed = offsetRef.current < -swipeThreshold
     if (blockSwipe) {
       offsetRef.current = 0
       if (revealed) {
@@ -86,7 +91,7 @@ export function MemberSwipeRow({
     if (revealed) {
       revealedAt.current = Date.now()
     }
-    applyOffset(revealed ? -REVEAL_PX : 0)
+    applyOffset(revealed ? -revealPx : 0)
   }
 
   useEffect(() => {
@@ -145,7 +150,7 @@ export function MemberSwipeRow({
       ref={rootRef}
       className={`member-swipe member-swipe--${variant}${
         blockSwipe ? ' member-swipe--blocked' : ''
-      }${blockSwipe && jokeOpen ? ' member-swipe--joke-open' : ''}`}
+      }${blockSwipe && jokeOpen ? ' member-swipe--joke-open' : ''}${className ? ` ${className}` : ''}`}
     >
       <div className="member-swipe__inner">
         {blockSwipe && jokeOpen && jokeMessage && (

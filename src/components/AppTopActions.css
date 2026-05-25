@@ -1,0 +1,18 @@
+.app-top-actions {
+  position: absolute;
+  top: var(--space-lg);
+  right: var(--space-lg);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.app-top-actions .power-btn {
+  position: static;
+  flex-shrink: 0;
+}
+
+.app-top-actions .back-btn {
+  flex-shrink: 0;
+}

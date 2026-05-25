@@ -43,19 +43,15 @@ const TEAM_NEW_FILE: Partial<Record<string, string>> = {
   'dynamo-m': 'dynamo',
 }
 
-/** Команды без файла в teams_new — пока старый PNG в public/teams/ */
-const TEAMS_WITHOUT_NEW_ICON = new Set(['vityaz', 'kunlun'])
-
-/** URL иконки из public/teams_new/ (основной источник для выбора команды) */
-export function teamNewIconUrl(slug: string): string | null {
-  if (TEAMS_WITHOUT_NEW_ICON.has(slug)) return null
+/** URL иконки из public/teams_new/ (единый стиль для всех команд) */
+export function teamNewIconUrl(slug: string): string {
   const file = TEAM_NEW_FILE[slug] ?? slug
   return `/teams_new/${file}.jpg`
 }
 
 /** Основной URL иконки команды */
 export function teamIconUrl(slug: string): string {
-  return teamNewIconUrl(slug) ?? `/teams/${slug}.png`
+  return teamNewIconUrl(slug)
 }
 
 /** Запасной PNG после импорта (teams:import), без SVG */

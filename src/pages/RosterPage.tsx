@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { createGame, deleteRoster, removeMember, updateRoster } from '@/api/admin'
+import { archiveGame, deleteGame } from '@/api/games'
+import { AdminGameListItem } from '@/components/AdminGameListItem'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { InfoHint } from '@/components/InfoHint'
 import { RosterEditModal } from '@/components/RosterEditModal'
@@ -11,7 +13,6 @@ import { Button } from '@/components/ui/Button'
 import { DateInput } from '@/components/ui/DateInput'
 import { Input } from '@/components/ui/Input'
 import { useAuth } from '@/context/AuthContext'
-import { groupLabel } from '@/lib/formatDate'
 import { PositionPill } from '@/components/PositionPill'
 import { nextWeekdayDate } from '@/lib/nextWeekday'
 import type { GameSummary, Roster, RosterMember } from '@/types/groups'
@@ -42,6 +43,12 @@ export function RosterPage() {
     user_id: number
     name: string
   } | null>(null)
+  const [pendingGameAction, setPendingGameAction] = useState<
+    | { type: 'delete'; game: GameSummary }
+    | { type: 'archive'; game: GameSummary }
+    | null
+  >(null)
+  const [gameActionBusy, setGameActionBusy] = useState(false)
   const [removeBusy, setRemoveBusy] = useState(false)
   const [deleteRosterOpen, setDeleteRosterOpen] = useState(false)
   const [deleteRosterBusy, setDeleteRosterBusy] = useState(false)
@@ -136,27 +143,6 @@ export function RosterPage() {
   return (
     <div className="groups-page">
       <header className="roster-page__toolbar">
-        <Link
-          to="/home"
-          className="page-circle-btn"
-          aria-label="Назад"
-          title="Назад"
-        >
-          <svg
-            className="page-circle-btn__icon"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <path
-              d="M14.5 6.5L9 12l5.5 5.5"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </Link>
         {roster ? (
           <div className="roster-name-plate">
             <h1 className="roster-name-plate__title">{roster.title}</h1>
@@ -201,6 +187,12 @@ export function RosterPage() {
       </header>
 
       <h2 className="groups-section-title">Игры</h2>
+
+      {canManage && (
+        <p className="roster-members-hint">
+          Свайп влево по игре — удалить или в архив.
+        </p>
+      )}
 
       {canManage && !showCreateGame && (
         <Button variant="accent" onClick={() => setShowCreateGame(true)}>
@@ -264,17 +256,14 @@ export function RosterPage() {
 
       <ul className="groups-list">
         {games.map((g) => (
-          <li key={g.id} className="groups-list__item">
-            <Link to={`/groups/${g.id}`} className="neo-surface group-card">
-              <span className="group-card__date">{groupLabel(g.group_date, g.title)}</span>
-              {g.vote_active && (
-                <span className="group-card__badge group-card__badge--active">голосование</span>
-              )}
-              {g.payment_active && (
-                <span className="group-card__badge group-card__badge--active">оплата</span>
-              )}
-            </Link>
-          </li>
+          <AdminGameListItem
+            key={g.id}
+            game={g}
+            canManage={canManage}
+            showRosterMeta={false}
+            onDelete={(game) => setPendingGameAction({ type: 'delete', game })}
+            onArchive={(game) => setPendingGameAction({ type: 'archive', game })}
+          />
         ))}
       </ul>
 
@@ -395,6 +384,50 @@ export function RosterPage() {
             setRemoveBusy(false)
           }
         }}
+      />
+
+      <ConfirmDialog
+        open={pendingGameAction?.type === 'delete'}
+        message="Удалить игру? Данные по ней будут стёрты."
+        titleId="roster-delete-game-title"
+        busy={gameActionBusy}
+        onConfirm={async () => {
+          if (!token || !pendingGameAction || pendingGameAction.type !== 'delete') return
+          setGameActionBusy(true)
+          setError('')
+          try {
+            await deleteGame(token, pendingGameAction.game.id)
+            setGames((list) => list.filter((g) => g.id !== pendingGameAction.game.id))
+            setPendingGameAction(null)
+          } catch (err) {
+            setError(err instanceof ApiError ? err.message : 'Не удалось удалить игру')
+          } finally {
+            setGameActionBusy(false)
+          }
+        }}
+        onCancel={() => !gameActionBusy && setPendingGameAction(null)}
+      />
+
+      <ConfirmDialog
+        open={pendingGameAction?.type === 'archive'}
+        message="Отправить игру в архив? Она пропадёт из списка."
+        titleId="roster-archive-game-title"
+        busy={gameActionBusy}
+        onConfirm={async () => {
+          if (!token || !pendingGameAction || pendingGameAction.type !== 'archive') return
+          setGameActionBusy(true)
+          setError('')
+          try {
+            await archiveGame(token, pendingGameAction.game.id)
+            setGames((list) => list.filter((g) => g.id !== pendingGameAction.game.id))
+            setPendingGameAction(null)
+          } catch (err) {
+            setError(err instanceof ApiError ? err.message : 'Не удалось отправить в архив')
+          } finally {
+            setGameActionBusy(false)
+          }
+        }}
+        onCancel={() => !gameActionBusy && setPendingGameAction(null)}
       />
 
       <ConfirmDialog

@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { fetchProfileRoster } from '@/api/profile'
 import { ApiError } from '@/api/http'
+import { PositionPill } from '@/components/PositionPill'
 import { useAuth } from '@/context/AuthContext'
-import { positionLabel } from '@/lib/labels'
 import type { ProfileRosterDetail, RosterMember } from '@/types/groups'
 import './Groups.css'
 
@@ -12,14 +12,19 @@ function MemberList({ title, items }: { title: string; items: RosterMember[] }) 
   return (
     <>
       <h2 className="groups-section-title">{title}</h2>
-      <ul className="members-list">
+      <ul className="members-list members-list--profile-compact">
         {items.map((m) => (
           <li key={m.user_id}>
-            <div className="neo-surface member-row">
-              <div>
-                <div className="member-row__name">{m.name}</div>
-                <div className="member-row__sub">{positionLabel(m.position)}</div>
-              </div>
+            <div className="neo-surface member-row member-row--profile-compact">
+              <span className="member-row__name">
+                {m.name}
+                {m.is_admin && (
+                  <span className="status-pill status-pill--admin member-row__admin-badge">
+                    админ
+                  </span>
+                )}
+              </span>
+              <PositionPill position={m.position} />
             </div>
           </li>
         ))}
@@ -57,11 +62,7 @@ export function ProfileRosterPage() {
   }, [token, rosterId])
 
   return (
-    <div className="groups-page">
-      <Link to="/profile" className="neo-btn groups-page__back">
-        ← Личный кабинет
-      </Link>
-
+    <div className="groups-page groups-page--profile-roster">
       {data?.roster && (
         <header className="groups-page__header">
           <h1 className="groups-page__title">{data.roster.title}</h1>

@@ -6,7 +6,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-  max-width: calc(100% - 44px - var(--space-lg) * 2 - var(--space-md));
+  max-width: calc(100% - 5.75rem - 44px - var(--space-sm) - var(--space-lg) * 2 - var(--space-md));
   text-decoration: none;
   color: inherit;
   border-radius: var(--radius-md);

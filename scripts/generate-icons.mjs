@@ -23,6 +23,9 @@ const PHONE_ICON_SOURCES = [
 
 const BG = { r: 30, g: 30, b: 30, alpha: 1 }
 
+/** Масштаб эмблемы внутри круга (1 = без увеличения; больше — крупнее картинка) */
+const ICON_ZOOM = 1.32
+
 const IOS_SIZES = [180, 167, 152, 120]
 
 fs.mkdirSync(iosDir, { recursive: true })
@@ -39,23 +42,29 @@ function resolvePhoneIconSrc() {
   )
 }
 
-/** Квадратная иконка для iOS — масштаб без лишнего сжатия (исходник уже готов) */
+/** Квадратная иконка: кроп центра с увеличением (ICON_ZOOM), размер файла — size×size */
 async function renderIosIcon(size, outPath) {
   const src = resolvePhoneIconSrc()
   const meta = await sharp(src).metadata()
 
-  let pipeline = sharp(src).flatten({ background: BG })
-
+  let side = Math.min(meta.width ?? size, meta.height ?? size)
+  let left = 0
+  let top = 0
   if (meta.width !== meta.height) {
-    const side = Math.min(meta.width, meta.height)
-    const left = Math.round((meta.width - side) / 2)
-    const top = Math.round((meta.height - side) / 2)
-    pipeline = sharp(src)
-      .extract({ left, top, width: side, height: side })
-      .flatten({ background: BG })
+    left = Math.round((meta.width - side) / 2)
+    top = Math.round((meta.height - side) / 2)
   }
 
-  await pipeline.resize(size, size, { fit: 'cover', position: 'center' }).png().toFile(outPath)
+  const cropSide = Math.max(1, Math.round(side / ICON_ZOOM))
+  const cropLeft = left + Math.round((side - cropSide) / 2)
+  const cropTop = top + Math.round((side - cropSide) / 2)
+
+  await sharp(src)
+    .extract({ left: cropLeft, top: cropTop, width: cropSide, height: cropSide })
+    .flatten({ background: BG })
+    .resize(size, size, { fit: 'fill' })
+    .png()
+    .toFile(outPath)
 
   console.log('OK', path.relative(root, outPath))
 }

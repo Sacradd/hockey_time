@@ -80,6 +80,17 @@ export function deleteGame(token: string, gameId: number) {
   )
 }
 
+export function archiveGame(token: string, gameId: number) {
+  return apiFetch<{ ok: boolean; archived: boolean; roster_id: number }>(
+    '/admin/archive-game.php',
+    {
+      method: 'POST',
+      token,
+      body: JSON.stringify({ game_id: gameId }),
+    }
+  )
+}
+
 export function confirmPayment(token: string, gameId: number) {
   return apiFetch<{ ok: boolean; payment: { paid_at: string }; already?: boolean }>(
     '/games/confirm-payment.php',

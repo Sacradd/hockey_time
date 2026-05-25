@@ -21,6 +21,8 @@ type Props = {
   onSave: () => void
   onClose: () => void
   onDeleteClick: () => void
+  teamsPublished?: boolean
+  onArchiveClick?: () => void
 }
 
 export function GameEditModal({
@@ -38,6 +40,8 @@ export function GameEditModal({
   onSave,
   onClose,
   onDeleteClick,
+  teamsPublished = false,
+  onArchiveClick,
 }: Props) {
   const titleId = useId()
 
@@ -128,11 +132,13 @@ export function GameEditModal({
           <div className="game-edit-modal__delete-wrap">
             <button
               type="button"
-              className="game-edit-modal__delete-btn"
+              className={`game-edit-modal__delete-btn${
+                teamsPublished ? ' game-edit-modal__delete-btn--archive' : ''
+              }`}
               disabled={busy}
-              onClick={onDeleteClick}
+              onClick={teamsPublished ? onArchiveClick : onDeleteClick}
             >
-              Удалить игру
+              {teamsPublished ? 'В архив' : 'Удалить игру'}
             </button>
           </div>
         </form>

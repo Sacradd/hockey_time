@@ -48,6 +48,7 @@ export interface ActiveGame extends GameSummary {
   roster_id: number
   roster_title: string
   roster_venue: string | null
+  can_manage?: boolean
 }
 
 export interface DashboardData {
@@ -90,4 +91,5 @@ export interface GameSummary {
   vote_open?: boolean
   vote_ends_at?: string | null
   payment_active: boolean
+  teams_published?: boolean
 }

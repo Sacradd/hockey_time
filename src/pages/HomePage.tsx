@@ -1,16 +1,22 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { createRoster } from '@/api/admin'
+import { archiveGame, deleteGame } from '@/api/games'
 import { fetchDashboard } from '@/api/home'
 import { ApiError } from '@/api/http'
+import { AdminGameListItem } from '@/components/AdminGameListItem'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { SuperUsersPanel } from '@/components/SuperUsersPanel'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { useAuth } from '@/context/AuthContext'
-import { groupLabel } from '@/lib/formatDate'
 import { weekdayLabel } from '@/lib/labels'
-import type { ActiveGame, Roster } from '@/types/groups'
+import type { ActiveGame, GameSummary, Roster } from '@/types/groups'
 import './Groups.css'
+
+type PendingGameAction =
+  | { type: 'delete'; game: GameSummary }
+  | { type: 'archive'; game: GameSummary }
 
 export function HomePage() {
   const { token, user } = useAuth()
@@ -24,6 +30,8 @@ export function HomePage() {
   const [showCreateRoster, setShowCreateRoster] = useState(false)
   const [rosterTitle, setRosterTitle] = useState('')
   const [createBusy, setCreateBusy] = useState(false)
+  const [pendingAction, setPendingAction] = useState<PendingGameAction | null>(null)
+  const [gameActionBusy, setGameActionBusy] = useState(false)
 
   useEffect(() => {
     if (!token) return
@@ -50,7 +58,27 @@ export function HomePage() {
     }
   }, [token, location.key])
 
+  async function handleConfirmGameAction() {
+    if (!token || !pendingAction) return
+    setGameActionBusy(true)
+    setError('')
+    try {
+      if (pendingAction.type === 'delete') {
+        await deleteGame(token, pendingAction.game.id)
+      } else {
+        await archiveGame(token, pendingAction.game.id)
+      }
+      setActiveGames((list) => list.filter((g) => g.id !== pendingAction.game.id))
+      setPendingAction(null)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Не удалось выполнить действие')
+    } finally {
+      setGameActionBusy(false)
+    }
+  }
+
   const showGroupsBlock = canCreateRoster || adminRosters.length > 0
+  const hasAdminGames = activeGames.some((g) => g.can_manage)
 
   return (
     <div className="groups-page">
@@ -148,6 +176,12 @@ export function HomePage() {
 
       <h2 className="groups-section-title">Игры</h2>
 
+      {hasAdminGames && (
+        <p className="groups-page__hint roster-members-hint">
+          Свайп влево по игре — удалить или в архив.
+        </p>
+      )}
+
       {!loading && !error && activeGames.length === 0 && (
         <p className="groups-page__empty">Нет предстоящих игр</p>
       )}
@@ -155,29 +189,13 @@ export function HomePage() {
       {!loading && !error && activeGames.length > 0 && (
         <ul className="groups-list">
           {activeGames.map((g) => (
-            <li key={g.id} className="groups-list__item">
-              <Link to={`/groups/${g.id}`} className="neo-surface group-card">
-                <div className="group-card__row">
-                  <span className="group-card__date">
-                    {groupLabel(g.group_date, g.title)}
-                  </span>
-                  {(g.vote_open ?? g.vote_active) && (
-                    <span className="group-card__badge group-card__badge--active">
-                      голосование
-                    </span>
-                  )}
-                  {g.payment_active && (
-                    <span className="group-card__badge group-card__badge--active">
-                      оплата
-                    </span>
-                  )}
-                </div>
-                <p className="group-card__meta">
-                  Группа — {g.roster_title}
-                  {g.roster_venue ? ` · ${g.roster_venue}` : ''}
-                </p>
-              </Link>
-            </li>
+            <AdminGameListItem
+              key={g.id}
+              game={g}
+              canManage={!!g.can_manage}
+              onDelete={(game) => setPendingAction({ type: 'delete', game })}
+              onArchive={(game) => setPendingAction({ type: 'archive', game })}
+            />
           ))}
         </ul>
       )}
@@ -185,6 +203,23 @@ export function HomePage() {
       {!loading && !error && user?.role === 'super' && token && (
         <SuperUsersPanel token={token} />
       )}
+
+      <ConfirmDialog
+        open={pendingAction?.type === 'delete'}
+        message="Удалить игру? Данные по ней будут стёрты."
+        titleId="home-delete-game-title"
+        busy={gameActionBusy}
+        onConfirm={() => void handleConfirmGameAction()}
+        onCancel={() => !gameActionBusy && setPendingAction(null)}
+      />
+      <ConfirmDialog
+        open={pendingAction?.type === 'archive'}
+        message="Отправить игру в архив? Она пропадёт из списка."
+        titleId="home-archive-game-title"
+        busy={gameActionBusy}
+        onConfirm={() => void handleConfirmGameAction()}
+        onCancel={() => !gameActionBusy && setPendingAction(null)}
+      />
     </div>
   )
 }

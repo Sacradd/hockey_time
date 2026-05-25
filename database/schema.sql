@@ -50,6 +50,7 @@ CREATE TABLE IF NOT EXISTS day_groups (
   vote_active TINYINT(1) NOT NULL DEFAULT 0,
   payment_active TINYINT(1) NOT NULL DEFAULT 0,
   teams_published TINYINT(1) NOT NULL DEFAULT 0,
+  archived_at DATETIME NULL DEFAULT NULL,
   vote_ends_at DATETIME NULL,
   vote_label_1 VARCHAR(64) NULL,
   vote_label_2 VARCHAR(64) NULL,

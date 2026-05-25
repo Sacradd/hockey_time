@@ -44,11 +44,29 @@ function db_set_teams_published(PDO $pdo, int $gameId, bool $published): void
     ]);
 }
 
+function db_ensure_archived_at_column(PDO $pdo): void
+{
+    if (!db_column_exists($pdo, 'day_groups', 'archived_at')) {
+        $pdo->exec(
+            'ALTER TABLE day_groups ADD COLUMN archived_at DATETIME NULL DEFAULT NULL AFTER teams_published'
+        );
+    }
+}
+
+function db_archive_game(PDO $pdo, int $gameId): void
+{
+    db_ensure_archived_at_column($pdo);
+    $pdo->prepare(
+        'UPDATE day_groups SET archived_at = NOW(), vote_active = 0, payment_active = 0 WHERE id = ?'
+    )->execute([$gameId]);
+}
+
 /** @return array<string, mixed>|null */
 function db_fetch_game(PDO $pdo, int $gameId): ?array
 {
     db_ensure_game_schedule_columns($pdo);
     db_ensure_teams_published_column($pdo);
+    db_ensure_archived_at_column($pdo);
     db_close_expired_vote($pdo, $gameId);
 
     $pdo->prepare(
@@ -58,7 +76,7 @@ function db_fetch_game(PDO $pdo, int $gameId): ?array
 
     $stmt = $pdo->prepare(
         'SELECT dg.id, dg.roster_id, dg.group_date, dg.title, dg.game_time, dg.weekday,
-                dg.vote_active, dg.payment_active, dg.teams_published, dg.vote_ends_at,
+                dg.vote_active, dg.payment_active, dg.teams_published, dg.archived_at, dg.vote_ends_at,
                 dg.vote_label_1, dg.vote_label_2, dg.vote_label_3, dg.vote_go_option,
                 r.title AS roster_title, r.venue AS roster_venue
          FROM day_groups dg
