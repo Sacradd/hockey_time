@@ -13,12 +13,13 @@ export function AppLayout() {
     !loading && !!user && !!token && !GUEST_PATHS.includes(pathname)
   const hideProfileBar = /^\/groups\/\d+\/teams\/?$/.test(pathname)
   const isTeamsFormPage = hideProfileBar
+  const isGameScrollPage = /^\/groups\/\d+\/?$/.test(pathname)
 
   return (
     <div
       className={`app-shell${showTopBar ? ' app-shell--with-topbar' : ''}${
         isTeamsFormPage ? ' app-shell--teams-form' : ''
-      }`}
+      }${isGameScrollPage ? ' app-shell--game-scroll' : ''}`}
     >
       {showTopBar && (
         <>

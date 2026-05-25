@@ -1,66 +1,26 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { fetchGameDetail, saveMatchTeams } from '@/api/games'
+import { fetchGameDetail, publishMatchTeams, saveMatchTeams } from '@/api/games'
 import { ApiError } from '@/api/http'
+import { MatchTeamsBoard } from '@/components/MatchTeamsBoard'
 import { PowerOffButton } from '@/components/PowerOffButton'
 import { TeamAssignRow } from '@/components/TeamAssignRow'
+import { Button } from '@/components/ui/Button'
 import { useAuth } from '@/context/AuthContext'
-import {
-  buildTeamBoardSlots,
-  collectInGameLineupMembers,
-  matchTeamLabel,
-  parseMatchTeams,
-  type MatchTeam,
-} from '@/lib/gameLineup'
-import type { GameLineup, LineupMember } from '@/types/games'
+import { collectInGameLineupMembers, parseMatchTeams, type MatchTeam } from '@/lib/gameLineup'
+import type { GameLineup } from '@/types/games'
 import './Groups.css'
-
-function TeamBoardColumn({
-  team,
-  members,
-}: {
-  team: MatchTeam
-  members: LineupMember[]
-}) {
-  const slots = useMemo(() => buildTeamBoardSlots(members), [members])
-
-  return (
-    <div className={`game-teams-board__col game-teams-board__col--${team}`}>
-      <p className="game-teams-board__title">{matchTeamLabel(team)}</p>
-      <ul className="game-teams-board__list">
-        {slots.map((m, index) => (
-          <li
-            key={m?.user_id ?? `${team}-slot-${index}`}
-            className={`game-teams-board__slot${
-              m ? '' : ' game-teams-board__slot--empty'
-            }`}
-          >
-            {m && (
-              <>
-                {m.name}
-                {m.position === 'goalie' && (
-                  <span className="game-teams-board__goalie"> вр.</span>
-                )}
-                {m.is_guest && (
-                  <span className="game-teams-board__guest"> гость</span>
-                )}
-              </>
-            )}
-          </li>
-        ))}
-      </ul>
-    </div>
-  )
-}
 
 function TeamsToolbar({
   saving,
   loading,
   onBack,
+  backLabel,
 }: {
   saving: boolean
   loading: boolean
   onBack: () => void
+  backLabel?: string
 }) {
   return (
     <div className="game-teams-toolbar">
@@ -70,7 +30,7 @@ function TeamsToolbar({
         onClick={onBack}
         disabled={loading || saving}
       >
-        {saving ? 'Сохранение…' : '← К игре'}
+        {backLabel ?? (saving ? 'Сохранение…' : '← К игре')}
       </button>
       <PowerOffButton />
     </div>
@@ -143,6 +103,19 @@ export function GameTeamsPage() {
     }
   }
 
+  async function handleDone() {
+    if (!token || saving) return
+    setSaving(true)
+    setError('')
+    try {
+      await publishMatchTeams(token, gameId, teams)
+      navigate(`/groups/${gameId}`)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Не удалось опубликовать составы')
+      setSaving(false)
+    }
+  }
+
   const showToolbar = loading || !!error || members.length === 0
 
   return (
@@ -162,10 +135,11 @@ export function GameTeamsPage() {
         <div className="game-teams-body">
           <div className="game-teams-scroll">
             <TeamsToolbar saving={saving} loading={loading} onBack={handleBack} />
-            <div className="game-teams-board neo-surface">
-              <TeamBoardColumn team="white" members={whiteMembers} />
-              <TeamBoardColumn team="black" members={blackMembers} />
-            </div>
+            <MatchTeamsBoard
+              whiteMembers={whiteMembers}
+              blackMembers={blackMembers}
+              showCopy
+            />
             <ul className="members-list members-list--compact game-teams-list">
               {members.map((m) => (
                 <TeamAssignRow
@@ -176,6 +150,17 @@ export function GameTeamsPage() {
                 />
               ))}
             </ul>
+            <div className="game-teams-done">
+              <Button
+                type="button"
+                variant="accent"
+                className="game-teams-done__btn"
+                disabled={saving}
+                onClick={() => void handleDone()}
+              >
+                {saving ? 'Публикация…' : 'Готово'}
+              </Button>
+            </div>
           </div>
         </div>
       )}

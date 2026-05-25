@@ -60,3 +60,39 @@ export function buildTeamBoardSlots(members: LineupMember[]): (LineupMember | nu
     ...Array.from({ length: TEAM_BOARD_SLOTS - 1 }, (_, i) => field[i] ?? null),
   ]
 }
+
+function formatBoardSlotName(member: LineupMember | null): string {
+  if (!member) return '—'
+  let line = member.name
+  if (member.position === 'goalie') line += ' (вр.)'
+  if (member.is_guest) line += ' (гость)'
+  return line
+}
+
+function formatBoardSlotLine(member: LineupMember | null, index: number): string {
+  const prefix = index === 0 ? 'Вр.' : `${index}.`
+  return `${prefix} ${formatBoardSlotName(member)}`
+}
+
+/** Текст живого блока: две колонки (белые | чёрные), как на экране. */
+export function formatMatchTeamsCopyText(
+  whiteMembers: LineupMember[],
+  blackMembers: LineupMember[]
+): string {
+  const whiteLabel = matchTeamLabel('white')
+  const blackLabel = matchTeamLabel('black')
+  const whiteSlots = buildTeamBoardSlots(whiteMembers)
+  const blackSlots = buildTeamBoardSlots(blackMembers)
+  const colGap = '   │   '
+
+  const leftLines = [whiteLabel, ...whiteSlots.map((m, i) => formatBoardSlotLine(m, i))]
+  const rightLines = [blackLabel, ...blackSlots.map((m, i) => formatBoardSlotLine(m, i))]
+  const leftWidth = Math.max(...leftLines.map((line) => line.length))
+
+  const pad = (text: string) =>
+    text.length >= leftWidth ? text : text + ' '.repeat(leftWidth - text.length)
+
+  return leftLines
+    .map((left, row) => `${pad(left)}${colGap}${rightLines[row] ?? ''}`)
+    .join('\n')
+}

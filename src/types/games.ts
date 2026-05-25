@@ -20,6 +20,7 @@ export interface GamePublic {
   vote_labels: VoteLabel[]
   vote_go_option: number
   payment_active: boolean
+  teams_published: boolean
   can_manage: boolean
 }
 
@@ -35,7 +36,7 @@ export interface MyPayment {
 export type LineupMember = GroupMember & {
   choice?: number
   voted_at?: string
-  /** Порядок в очереди «еду» (1 = первый) */
+  /** Порядок в очереди «будут» (1 = первый) */
   queue_order?: number
   /** Только для админа при payment_active */
   paid?: boolean

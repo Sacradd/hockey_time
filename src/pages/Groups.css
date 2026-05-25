@@ -1473,8 +1473,48 @@ a.super-add-player-btn {
   top: 0;
   z-index: 5;
   margin: 0 0 var(--space-sm);
-  padding: var(--space-sm) var(--space-sm) var(--space-xs);
+  padding: var(--space-sm) var(--space-sm) calc(var(--space-lg) + 2.25rem) var(--space-sm);
   --game-teams-slot-height: 1.35rem;
+}
+
+.game-teams-board__copy-btn {
+  position: absolute;
+  right: var(--space-xs);
+  bottom: var(--space-xs);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  color: var(--color-accent);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-raised);
+  transition:
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.1s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.game-teams-board__copy-btn:hover {
+  color: #fff;
+  background: var(--color-accent);
+  box-shadow: var(--btn-shadow);
+}
+
+.game-teams-board__copy-btn:active {
+  transform: scale(0.94);
+}
+
+.game-teams-board__copy-icon {
+  width: 1.125rem;
+  height: 1.125rem;
+  display: block;
 }
 
 .game-teams-board.neo-surface {
@@ -1537,6 +1577,35 @@ a.super-add-player-btn {
 .game-teams-list {
   margin-top: 0;
   padding-bottom: 0;
+}
+
+.game-teams-done {
+  flex-shrink: 0;
+  padding: var(--space-md) 0 calc(var(--space-lg) + var(--safe-bottom, 0px));
+}
+
+.game-teams-done__btn {
+  width: 100%;
+}
+
+.game-published-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.game-published-section .groups-section-title {
+  margin: 0;
+}
+
+.game-teams-board--published {
+  position: relative;
+  top: auto;
+  margin: 0;
+}
+
+.game-published-section__edit {
+  width: 100%;
 }
 
 .team-assign-row {

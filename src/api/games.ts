@@ -13,16 +13,31 @@ export function fetchGameDetail(token: string, gameId: number) {
 export function saveMatchTeams(
   token: string,
   gameId: number,
+  assignments: Record<number, MatchTeam>,
+  options?: { publish?: boolean }
+) {
+  return apiFetch<{
+    ok: boolean
+    match_teams: Record<string, MatchTeam>
+    game?: GamePublic
+  }>('/admin/save-match-teams.php', {
+    method: 'POST',
+    token,
+    body: JSON.stringify({
+      game_id: gameId,
+      assignments,
+      publish: options?.publish === true,
+    }),
+  })
+}
+
+/** Сохранить составы и показать их всем участникам на странице игры. */
+export function publishMatchTeams(
+  token: string,
+  gameId: number,
   assignments: Record<number, MatchTeam>
 ) {
-  return apiFetch<{ ok: boolean; match_teams: Record<string, MatchTeam> }>(
-    '/admin/save-match-teams.php',
-    {
-      method: 'POST',
-      token,
-      body: JSON.stringify({ game_id: gameId, assignments }),
-    }
-  )
+  return saveMatchTeams(token, gameId, assignments, { publish: true })
 }
 
 /** Админ: отметить оплату полевого (в т.ч. если игрок сообщил вне приложения). */
@@ -148,7 +163,7 @@ export function resendPaymentNotify(token: string, gameId: number) {
   )
 }
 
-/** Убрать из «еду»: голос → «не еду», резерв пересчитывается по времени голоса. */
+/** Убрать из «будут»: голос → «не буду», резерв пересчитывается по времени голоса. */
 export function markPlayerNotGoing(token: string, gameId: number, userId: number) {
   return apiFetch<{ ok: boolean; lineup: GameLineup }>('/admin/mark-not-going.php', {
     method: 'POST',
@@ -179,7 +194,7 @@ export function addGuestToQueue(
   })
 }
 
-/** Вернуть в «еду» из «не едут»; место в очереди по времени занесения. */
+/** Вернуть в «будут» из «не будут»; место в очереди по времени занесения. */
 export function markPlayerInLineup(token: string, gameId: number, userId: number) {
   return apiFetch<{ ok: boolean; lineup: GameLineup }>('/admin/mark-in-lineup.php', {
     method: 'POST',
@@ -188,7 +203,7 @@ export function markPlayerInLineup(token: string, gameId: number, userId: number
   })
 }
 
-/** Вставить/переставить полевого в очереди «еду» (сдвиг остальных). */
+/** Вставить/переставить полевого в очереди «будут» (сдвиг остальных). */
 export function setLineupQueuePosition(
   token: string,
   gameId: number,

@@ -44,6 +44,22 @@ body {
     calc(var(--safe-bottom) + var(--space-md));
 }
 
+/** Страница игры: прокрутка только внутри PullToRefresh, не по window */
+.app-shell--game-scroll {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  min-height: 100dvh;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.app-shell--game-scroll .ptr-scroll-root {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+}
+
 .app-shell--with-topbar {
   padding-top: calc(var(--safe-top) + var(--space-lg) + 44px + var(--space-sm));
 }

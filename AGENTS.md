@@ -101,15 +101,22 @@ docs/SPEC.md
 | 5 | Удаление из состава (свайп «выбыл») | ✅ в рамках игры |
 | 6 | Оплата | ✅ требование админом; подтверждение полевым; ₽ в составе; push позже |
 | 7 | Гости, ручная очередь | ✅ на экране игры |
-| 8 | Состав белые/чёрные на игру (`game_match_teams`) | ✅ UI + API; push позже |
+| 8 | Состав белые/чёрные (`game_match_teams`) | ✅ UI + API; публикация «Готово» (`teams_published`); push позже |
 
 **Не делать всё сразу** — один этап за раз, согласованный с пользователем.
 
 ## Известные ограничения / следующая сессия
 
-- Страница `/groups/:id/teams`: довести вёрстку (липкий блок, safe-area) на реальном iPhone после деплоя PWA.
+- **Деплой:** [docs/DEPLOY.md](docs/DEPLOY.md) — чеклист reg.ru + HTTPS.
 - `SuperUsersPanel.tsx`: ошибка TS `Timeout` — мешает `npm run build` (исправить перед prod-сборкой).
-- Push при назначении составов; закрытие/архив игры после рассылки — не реализовано.
+- **Push:** подписка в PWA + SW + рассылка при старте голосования (бэкенд оплаты частично готов).
+- Закрытие/архив игры после публикации составов — не реализовано.
+
+## Недавние доработки UI (этап 8+)
+
+- Голосование не запущено / «Буду»·«Не буду» (вместо «Еду»·«Не еду»).
+- Pull-to-refresh на странице игры (без polling).
+- «Сформировать состав»: копирование в 2 колонки, кнопка **Готово** → у всех экран только составы (`teams_published`).
 
 ## Правила для AI при работе в репозитории
 
@@ -126,7 +133,7 @@ docs/SPEC.md
 users           — phone, password_hash, display_login, role, position (player|goalie), ...
 rosters         — title, venue, weekday (Среда·Кристалл, …)
 roster_members  — roster_id, user_id
-day_groups      — roster_id, group_date, title, game_time, weekday, vote_*, payment_active, ...
+day_groups      — roster_id, group_date, title, vote_*, payment_active, teams_published, ...
 votes           — user_id, group_id, choice (1|2|3), voted_at
 payments        — user_id, group_id, paid_at
 game_match_teams — group_id, user_id, team (white|black)
@@ -139,3 +146,8 @@ push_subscriptions — endpoint, keys, user_id
 - Точный тариф reg.ru (PHP, MySQL, SSL).
 - Домен для HTTPS (нужен для PWA push).
 - Длительность голосования по умолчанию.
+
+## Монетизация
+
+Черновик рассуждений (комиссия с платежей через приложение, масштабирование по группам): **[docs/MONETIZATION.md](docs/MONETIZATION.md)**.  
+**Сейчас:** сначала prod и тест на личных группах; к монетизации — после стабильного цикла.

@@ -54,7 +54,7 @@ try {
         api_json_response(['ok' => false, 'error' => 'Игрок ещё не голосовал'], 400);
     }
     if ((int) $voteRow['choice'] !== $goOption) {
-        api_json_response(['ok' => false, 'error' => 'Игрок уже отмечен как «не еду»'], 400);
+        api_json_response(['ok' => false, 'error' => 'Игрок уже отмечен как «не буду»'], 400);
     }
 
     $declineChoice = db_game_decline_choice($game);

@@ -67,7 +67,7 @@ export function SuperUsersPanel({ token }: { token: string }) {
   const panelRef = useRef<HTMLElement>(null)
   const userRowRefs = useRef<Map<number, HTMLLIElement>>(new Map())
   const pendingOpenUserId = useRef<number | null>(null)
-  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const closeTimerRef = useRef<number | null>(null)
 
   const load = useCallback(() => {
     setLoading(true)

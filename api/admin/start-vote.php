@@ -14,8 +14,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 try {
     $body = api_read_json_body();
     $gameId = (int) ($body['game_id'] ?? $body['group_id'] ?? 0);
-    $label1 = trim((string) ($body['vote_label_1'] ?? $body['label_1'] ?? 'Еду'));
-    $label2 = trim((string) ($body['vote_label_2'] ?? $body['label_2'] ?? 'Не еду'));
+    $label1 = trim((string) ($body['vote_label_1'] ?? $body['label_1'] ?? 'Буду'));
+    $label2 = trim((string) ($body['vote_label_2'] ?? $body['label_2'] ?? 'Не буду'));
     $label3 = isset($body['vote_label_3']) || isset($body['label_3'])
         ? trim((string) ($body['vote_label_3'] ?? $body['label_3'] ?? ''))
         : '';

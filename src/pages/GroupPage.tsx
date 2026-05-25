@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   ADD_QUEUE_GUEST,
@@ -19,6 +19,8 @@ import {
 import { ApiError } from '@/api/http'
 import { fetchRosterMembers } from '@/api/rosters'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { MatchTeamsBoard } from '@/components/MatchTeamsBoard'
+import { PullToRefresh } from '@/components/PullToRefresh'
 import { GameEditModal } from '@/components/GameEditModal'
 import { InfoHint } from '@/components/InfoHint'
 import { InputDialog } from '@/components/InputDialog'
@@ -27,6 +29,12 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { useAuth } from '@/context/AuthContext'
 import { validateDisplayLogin } from '@/lib/displayLogin'
+import {
+  collectInGameLineupMembers,
+  matchTeamLabel,
+  parseMatchTeams,
+  type MatchTeam,
+} from '@/lib/gameLineup'
 import { groupLabel } from '@/lib/formatDate'
 import { weekdayFromIsoDate } from '@/lib/weekdays'
 import { PositionPill } from '@/components/PositionPill'
@@ -40,20 +48,32 @@ import type {
 import type { RosterMember } from '@/types/groups'
 import './Groups.css'
 
+/** Голосование ещё не запускали (нет подписей вариантов). */
+function isVoteNotStarted(game: GamePublic): boolean {
+  return !game.vote_active && game.vote_labels.length === 0
+}
+
 function findMyLineupStatus(
   lineup: GameLineup,
-  userId: number
+  userId: number,
+  voteNotStarted: boolean
 ): string | null {
   const inList = (list: LineupMember[], label: string) =>
     list.some((m) => m.user_id === userId) ? label : null
 
-  return (
+  const settled =
     inList(lineup.field_lineup, 'Вы в игре (полевой)') ??
     inList(lineup.field_reserve, 'Вы в резерве (полевой)') ??
     inList(lineup.goalie_lineup, 'Вы в игре (вратарь)') ??
     inList(lineup.goalie_reserve, 'Вратари в игре уже набраны') ??
-    inList(lineup.field_declined, 'Вы отметили, что не едете') ??
-    inList(lineup.goalie_declined, 'Вы отметили, что не едете') ??
+    inList(lineup.field_declined, 'Вы отметили, что не будете') ??
+    inList(lineup.goalie_declined, 'Вы отметили, что не будете') ??
+    null
+
+  if (settled) return settled
+  if (voteNotStarted) return null
+
+  return (
     inList(lineup.field_pending, 'Вы ещё не ответили') ??
     inList(lineup.goalie_pending, 'Вы ещё не ответили') ??
     null
@@ -67,7 +87,7 @@ function myGameStatusClass(status: string): string {
   if (status.startsWith('Вы в игре') || status.startsWith('Вы в резерве')) {
     return 'my-game-status--ok'
   }
-  if (status === 'Вы отметили, что не едете') {
+  if (status === 'Вы отметили, что не будете') {
     return 'my-game-status--declined'
   }
   return 'my-game-status--muted'
@@ -80,7 +100,7 @@ function fieldLineupCountClass(count: number): string {
   return 'lineup-count--low'
 }
 
-/** Следующее свободное место в очереди полевых «еду». */
+/** Следующее свободное место в очереди полевых «будут». */
 function nextFieldQueuePosition(lineup: GameLineup): number {
   const inQueue = [...lineup.field_lineup, ...lineup.field_reserve]
   if (inQueue.length === 0) return 1
@@ -115,7 +135,7 @@ function LineupSection({
   showQueueAdmin?: boolean
   onRemove?: (member: LineupMember) => void
   onPositionClick?: (member: LineupMember) => void
-  /** Свайп «В состав» для «не едут» */
+  /** Свайп «В состав» для «не будут» */
   onRestore?: (member: LineupMember) => void
   headerAction?: React.ReactNode
   panelBelowTitle?: React.ReactNode
@@ -263,6 +283,7 @@ export function GroupPage() {
   const [myVote, setMyVote] = useState<GameDetailResponse['my_vote']>(null)
   const [myPayment, setMyPayment] = useState<MyPayment | null>(null)
   const [lineup, setLineup] = useState<GameLineup | null>(null)
+  const [matchTeams, setMatchTeams] = useState<Record<number, MatchTeam>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [voteBusy, setVoteBusy] = useState(false)
@@ -281,8 +302,8 @@ export function GroupPage() {
   const [queueEditTarget, setQueueEditTarget] = useState<LineupMember | null>(null)
   const [queueEditPosition, setQueueEditPosition] = useState('')
   const [queueEditError, setQueueEditError] = useState('')
-  const [label1, setLabel1] = useState('Еду')
-  const [label2, setLabel2] = useState('Не еду')
+  const [label1, setLabel1] = useState('Буду')
+  const [label2, setLabel2] = useState('Не буду')
   const [adminBusy, setAdminBusy] = useState(false)
   const [removeTarget, setRemoveTarget] = useState<LineupMember | null>(null)
   const [removeBusy, setRemoveBusy] = useState(false)
@@ -305,22 +326,30 @@ export function GroupPage() {
   const [editTime, setEditTime] = useState('')
   const [editWeekday, setEditWeekday] = useState('3')
 
+  const refresh = useCallback(async () => {
+    if (!token || !Number.isFinite(gameId) || gameId < 1) return
+    const res = await fetchGameDetail(token, gameId)
+    setGame(res.game)
+    setMyVote(res.my_vote)
+    setMyPayment(res.my_payment ?? null)
+    setLineup(res.lineup)
+    setMatchTeams(parseMatchTeams(res.match_teams))
+    if (res.game.can_manage) {
+      const rm = await fetchRosterMembers(token, res.game.roster_id)
+      setRosterMembers(rm.members)
+    }
+  }, [token, gameId])
+
   const load = useCallback(() => {
     if (!token || !Number.isFinite(gameId) || gameId < 1) return
     setLoading(true)
     setError('')
-    fetchGameDetail(token, gameId)
-      .then((res) => {
-        setGame(res.game)
-        setMyVote(res.my_vote)
-        setMyPayment(res.my_payment ?? null)
-        setLineup(res.lineup)
-      })
+    void refresh()
       .catch((err) => {
         setError(err instanceof ApiError ? err.message : 'Не удалось загрузить игру')
       })
       .finally(() => setLoading(false))
-  }, [token, gameId])
+  }, [token, gameId, refresh])
 
   useEffect(() => {
     load()
@@ -656,8 +685,32 @@ export function GroupPage() {
     }
   }
 
+  const teamsPublished = !!game?.teams_published
+  const publishedMembers = useMemo(
+    () => (lineup ? collectInGameLineupMembers(lineup) : []),
+    [lineup]
+  )
+  const publishedWhite = useMemo(
+    () => publishedMembers.filter((m) => matchTeams[m.user_id] === 'white'),
+    [publishedMembers, matchTeams]
+  )
+  const publishedBlack = useMemo(
+    () => publishedMembers.filter((m) => matchTeams[m.user_id] === 'black'),
+    [publishedMembers, matchTeams]
+  )
+  const myPublishedTeam = user ? matchTeams[user.id] : undefined
+  const myPublishedStatus =
+    myPublishedTeam !== undefined
+      ? `Вы в команде ${matchTeamLabel(myPublishedTeam)}`
+      : user && publishedMembers.some((m) => m.user_id === user.id)
+        ? 'Команда не назначена'
+        : null
+
+  const voteNotStarted = game ? isVoteNotStarted(game) : false
   const myStatus =
-    user && lineup ? findMyLineupStatus(lineup, user.id) : null
+    user && lineup
+      ? findMyLineupStatus(lineup, user.id, voteNotStarted)
+      : null
   const canManageLineup = !!game?.can_manage
   const showPaymentBadge = canManageLineup && !!game?.payment_active
   const inFieldLineup =
@@ -686,7 +739,27 @@ export function GroupPage() {
     : { showPaymentBadge: false as const }
   const lineupAdminPropsNoPayment = lineupAdminPropsBase ?? { showPaymentBadge: false as const }
 
+  const pullRefreshDisabled =
+    (loading && !lineup) ||
+    gameEditOpen ||
+    removeTarget !== null ||
+    restoreTarget !== null
+
+  const handlePullRefresh = useCallback(async () => {
+    setError('')
+    try {
+      await refresh()
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Не удалось обновить')
+      throw err
+    }
+  }, [refresh])
+
   return (
+    <PullToRefresh
+      onRefresh={handlePullRefresh}
+      disabled={pullRefreshDisabled}
+    >
     <div className="groups-page groups-page--game">
       <Link to="/home" className="neo-btn groups-page__back">
         ← На главную
@@ -701,7 +774,7 @@ export function GroupPage() {
                 weekday: game.weekday,
               })}
             </h1>
-            {game.can_manage && (
+            {game.can_manage && !teamsPublished && (
               <button
                 type="button"
                 className="profile-edit-btn"
@@ -742,17 +815,48 @@ export function GroupPage() {
       {loading && <p className="groups-page__empty">Загрузка…</p>}
       {error && <p className="groups-page__error">{error}</p>}
 
-      {!loading && myStatus && (
+      {!loading && teamsPublished && lineup && (
+        <section className="game-published-section">
+          <h2 className="groups-section-title">Составы на игру</h2>
+          {myPublishedStatus && (
+            <p className={`my-game-status neo-surface ${myPublishedTeam ? 'my-game-status--ok' : 'my-game-status--muted'}`}>
+              {myPublishedStatus}
+            </p>
+          )}
+          <MatchTeamsBoard
+            whiteMembers={publishedWhite}
+            blackMembers={publishedBlack}
+            showCopy={!!game?.can_manage}
+            className="game-teams-board--published"
+          />
+          {game?.can_manage && (
+            <Button
+              type="button"
+              variant="default"
+              className="game-published-section__edit"
+              onClick={() => navigate(`/groups/${gameId}/teams`)}
+            >
+              Изменить составы
+            </Button>
+          )}
+        </section>
+      )}
+
+      {!loading && !teamsPublished && myStatus && (
         <p className={`my-game-status neo-surface ${myGameStatusClass(myStatus)}`}>
           {myStatus}
         </p>
       )}
 
-      {!loading && game && !game.vote_open && !game.vote_active && (
+      {!loading && !teamsPublished && game && voteNotStarted && (
+        <p className="groups-page__empty">Голосование не запущено</p>
+      )}
+
+      {!loading && !teamsPublished && game && !voteNotStarted && !game.vote_open && !game.vote_active && (
         <p className="groups-page__empty">Голосование закрыто</p>
       )}
 
-      {!loading && game?.payment_active && !game.can_manage && inFieldLineup && !myPayment && (
+      {!loading && !teamsPublished && game?.payment_active && !game.can_manage && inFieldLineup && !myPayment && (
         <section className="payment-panel">
           <Button
             variant="accent"
@@ -765,13 +869,13 @@ export function GroupPage() {
         </section>
       )}
 
-      {!loading && game?.payment_active && !game.can_manage && inFieldLineup && myPayment && (
+      {!loading && !teamsPublished && game?.payment_active && !game.can_manage && inFieldLineup && myPayment && (
         <p className="my-game-status neo-surface my-game-status--success">
           Оплата подтверждена
         </p>
       )}
 
-      {!loading && game?.vote_open && game.vote_labels.length > 0 && !myVote && (
+      {!loading && !teamsPublished && game?.vote_open && game.vote_labels.length > 0 && !myVote && (
         <section className="vote-panel neo-surface">
           <div className="vote-panel__buttons">
             {game.vote_labels.map((opt) => (
@@ -789,7 +893,7 @@ export function GroupPage() {
         </section>
       )}
 
-      {!loading && game?.can_manage && (
+      {!loading && !teamsPublished && game?.can_manage && (
         <section className="vote-admin">
           {!game.vote_active && !showStart && (
             <Button variant="accent" onClick={() => setStartVoteConfirmOpen(true)}>
@@ -799,13 +903,13 @@ export function GroupPage() {
           {showStart && !game.vote_active && (
             <form className="vote-admin__form neo-surface" onSubmit={handleStartVote}>
               <Input
-                label="Вариант «еду»"
+                label="Вариант «буду»"
                 value={label1}
                 onChange={(e) => setLabel1(e.target.value)}
                 required
               />
               <Input
-                label="Вариант «не еду»"
+                label="Вариант «не буду»"
                 value={label2}
                 onChange={(e) => setLabel2(e.target.value)}
                 required
@@ -896,7 +1000,7 @@ export function GroupPage() {
           removeTarget
             ? removeTarget.is_guest
               ? `Вы уверены в удалении «${removeTarget.name}»?`
-              : `${removeTarget.name} выбыл из «еду»? Игрок попадёт в «не едут», состав пересчитается.`
+              : `${removeTarget.name} выбыл из «будут»? Игрок попадёт в «не будут», состав пересчитается.`
             : ''
         }
         onConfirm={() => void handleConfirmRemove()}
@@ -1013,7 +1117,7 @@ export function GroupPage() {
         onCancel={closeQueueEditDialog}
       />
 
-      {!loading && lineup && (
+      {!loading && !teamsPublished && lineup && (
         <>
           <LineupSection
             title="В игре · вратари"
@@ -1180,22 +1284,25 @@ export function GroupPage() {
             {...lineupAdminPropsNoPayment}
           />
           <LineupSection
-            title="Не едут"
+            title="Не будут"
             members={lineup.field_declined}
             onRestore={canManageLineup ? (m) => setRestoreTarget(m) : undefined}
           />
           <LineupSection
-            title="Не едут · вратари"
+            title="Не будут · вратари"
             members={lineup.goalie_declined}
             onRestore={canManageLineup ? (m) => setRestoreTarget(m) : undefined}
           />
-          <LineupSection
-            title="Ещё не ответили"
-            members={[...lineup.field_pending, ...lineup.goalie_pending]}
-            {...lineupAdminPropsNoPayment}
-          />
+          {!voteNotStarted && (
+            <LineupSection
+              title="Ещё не ответили"
+              members={[...lineup.field_pending, ...lineup.goalie_pending]}
+              {...lineupAdminPropsNoPayment}
+            />
+          )}
         </>
       )}
     </div>
+    </PullToRefresh>
   )
 }

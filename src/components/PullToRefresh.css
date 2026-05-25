@@ -1,0 +1,73 @@
+.ptr-scroll-root {
+  flex: 1;
+  min-height: 0;
+  max-height: calc(
+    100dvh - var(--safe-top, 0px) - var(--safe-bottom, 0px) - 2 * var(--space-md) -
+      44px - var(--space-lg) - var(--space-sm)
+  );
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
+.app-shell:not(.app-shell--with-topbar) .ptr-scroll-root {
+  max-height: calc(
+    100dvh - var(--safe-top, 0px) - var(--safe-bottom, 0px) - 2 * var(--space-md)
+  );
+}
+
+.ptr-indicator {
+  position: fixed;
+  top: calc(var(--safe-top, 0px) + var(--space-sm));
+  left: 50%;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-md);
+  border-radius: var(--radius-full);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-raised);
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, calc(-100% - var(--ptr-pull, 0px)));
+  transition: opacity 0.15s ease;
+}
+
+.ptr-indicator--visible {
+  opacity: 1;
+}
+
+.ptr-indicator--ready {
+  color: var(--color-accent);
+}
+
+.ptr-indicator__icon {
+  width: 1.125rem;
+  height: 1.125rem;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.ptr-indicator--busy .ptr-indicator__icon {
+  animation: ptr-spin 0.7s linear infinite;
+}
+
+.ptr-indicator--visible:not(.ptr-indicator--busy) .ptr-indicator__icon {
+  transform: rotate(calc(var(--ptr-pull, 0px) * 3deg));
+}
+
+@keyframes ptr-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.app-shell--with-topbar .ptr-indicator {
+  top: calc(var(--safe-top, 0px) + var(--space-lg) + 44px);
+}

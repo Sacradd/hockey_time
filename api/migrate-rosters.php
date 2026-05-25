@@ -120,6 +120,13 @@ try {
         $steps[] = 'day_groups.vote_go_option added';
     }
 
+    if (!db_column_exists($pdo, 'day_groups', 'teams_published')) {
+        $pdo->exec(
+            'ALTER TABLE day_groups ADD COLUMN teams_published TINYINT(1) NOT NULL DEFAULT 0 AFTER payment_active'
+        );
+        $steps[] = 'day_groups.teams_published added';
+    }
+
     if (!db_column_exists($pdo, 'votes', 'choice')) {
         $pdo->exec('ALTER TABLE votes ADD COLUMN choice TINYINT UNSIGNED NOT NULL DEFAULT 1');
         $steps[] = 'votes.choice added';

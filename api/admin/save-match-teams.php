@@ -32,11 +32,20 @@ try {
     $rosterId = (int) $game['roster_id'];
     $viewer = api_require_roster_admin($rosterId);
 
+    $publish = (bool) ($body['publish'] ?? false);
+
     $saved = db_save_game_match_teams($pdo, $gameId, $rosterId, $game, $viewer, $assignments);
+
+    if ($publish) {
+        db_set_teams_published($pdo, $gameId, true);
+    }
+
+    $game = db_fetch_game($pdo, $gameId);
 
     api_json_response([
         'ok' => true,
         'match_teams' => $saved,
+        'game' => api_game_public($game, $viewer, true),
     ]);
 } catch (Throwable $e) {
     api_handle_exception($e);

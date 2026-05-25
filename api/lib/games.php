@@ -26,10 +26,29 @@ function db_ensure_game_schedule_columns(PDO $pdo): void
     }
 }
 
+function db_ensure_teams_published_column(PDO $pdo): void
+{
+    if (!db_column_exists($pdo, 'day_groups', 'teams_published')) {
+        $pdo->exec(
+            'ALTER TABLE day_groups ADD COLUMN teams_published TINYINT(1) NOT NULL DEFAULT 0 AFTER payment_active'
+        );
+    }
+}
+
+function db_set_teams_published(PDO $pdo, int $gameId, bool $published): void
+{
+    db_ensure_teams_published_column($pdo);
+    $pdo->prepare('UPDATE day_groups SET teams_published = ? WHERE id = ?')->execute([
+        $published ? 1 : 0,
+        $gameId,
+    ]);
+}
+
 /** @return array<string, mixed>|null */
 function db_fetch_game(PDO $pdo, int $gameId): ?array
 {
     db_ensure_game_schedule_columns($pdo);
+    db_ensure_teams_published_column($pdo);
     db_close_expired_vote($pdo, $gameId);
 
     $pdo->prepare(
@@ -39,7 +58,7 @@ function db_fetch_game(PDO $pdo, int $gameId): ?array
 
     $stmt = $pdo->prepare(
         'SELECT dg.id, dg.roster_id, dg.group_date, dg.title, dg.game_time, dg.weekday,
-                dg.vote_active, dg.payment_active, dg.vote_ends_at,
+                dg.vote_active, dg.payment_active, dg.teams_published, dg.vote_ends_at,
                 dg.vote_label_1, dg.vote_label_2, dg.vote_label_3, dg.vote_go_option,
                 r.title AS roster_title, r.venue AS roster_venue
          FROM day_groups dg
@@ -63,7 +82,7 @@ function db_vote_is_open(array $game): bool
     return strtotime((string) $ends) > time();
 }
 
-/** Вариант ответа «не еду» для игры (первый choice ≠ vote_go_option с подписью). */
+/** Вариант ответа «не буду» для игры (первый choice ≠ vote_go_option с подписью). */
 function db_game_decline_choice(array $game): int
 {
     $go = (int) ($game['vote_go_option'] ?? 1);
@@ -133,6 +152,7 @@ function api_game_public(array $game, array $viewer, bool $canManage): array
         'vote_labels' => $labels,
         'vote_go_option' => (int) ($game['vote_go_option'] ?? 1),
         'payment_active' => (bool) ($game['payment_active']),
+        'teams_published' => (bool) ($game['teams_published'] ?? false),
         'can_manage' => $canManage,
     ];
 }
@@ -228,7 +248,7 @@ function db_fetch_game_votes(PDO $pdo, int $gameId): array
 }
 
 /**
- * Состав: 20 полевых + резерв + 2 вратаря по времени голоса «еду».
+ * Состав: 20 полевых + резерв + 2 вратаря по времени голоса «буду».
  *
  * @return array{
  *   field_lineup: list<array>,
@@ -526,7 +546,7 @@ function db_ensure_group_member(PDO $pdo, int $userId, int $gameId): void
 }
 
 /**
- * Очередь полевых «еду»: ручные queue_position + остальные по voted_at.
+ * Очередь полевых «будут»: ручные queue_position + остальные по voted_at.
  *
  * @param list<array<string, mixed>> $candidates
  * @return list<array<string, mixed>>
@@ -776,7 +796,7 @@ function db_clear_field_go_queue_slot(PDO $pdo, int $gameId, int $userId): void
     )->execute([$userId, $gameId]);
 }
 
-/** Вернуть в «еду»: голос «еду», voted_at = момент занесения, место в очереди по времени. */
+/** Вернуть в «будут»: голос «буду», voted_at = момент занесения, место в очереди по времени. */
 function db_mark_player_in_lineup(
     PDO $pdo,
     int $gameId,
@@ -795,7 +815,7 @@ function db_mark_player_in_lineup(
         throw new InvalidArgumentException('Игрок ещё не голосовал');
     }
     if ((int) $voteRow['choice'] === $goOption) {
-        throw new InvalidArgumentException('Игрок уже в очереди «еду»');
+        throw new InvalidArgumentException('Игрок уже в очереди «будут»');
     }
 
     db_ensure_group_member($pdo, $userId, $gameId);
@@ -873,7 +893,7 @@ function db_is_game_guest(PDO $pdo, int $gameId, int $userId): bool
     return (bool) $stmt->fetchColumn();
 }
 
-/** Удалить гостя с игры (не «не еду» — запись гостя снимается). */
+/** Удалить гостя с игры (не «не буду» — запись гостя снимается). */
 function db_remove_game_guest(
     PDO $pdo,
     int $gameId,

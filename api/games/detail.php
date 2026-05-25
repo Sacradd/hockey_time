@@ -45,8 +45,9 @@ try {
 
     $lineup = db_compute_lineup($pdo, $gameId, $rosterId, $game, $user);
 
+    $teamsPublished = (bool) ($game['teams_published'] ?? false);
     $matchTeams = null;
-    if ($canManage) {
+    if ($canManage || $teamsPublished) {
         $matchTeams = db_fetch_game_match_teams($pdo, $gameId);
     }
 
