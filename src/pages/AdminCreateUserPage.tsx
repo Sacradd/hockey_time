@@ -16,6 +16,7 @@ export function AdminCreateUserPage() {
   const { token } = useAuth()
   const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
+  const [position, setPosition] = useState<'player' | 'goalie'>('player')
   const [isGroupAdmin, setIsGroupAdmin] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -36,6 +37,7 @@ export function AdminCreateUserPage() {
       const res = await createUser(token, {
         phone: phone.trim(),
         password: passwordForCopy,
+        position,
         is_group_admin: isGroupAdmin,
       })
       const note = res.is_group_admin
@@ -48,6 +50,7 @@ export function AdminCreateUserPage() {
       })
       setPhone('')
       setPassword('')
+      setPosition('player')
       setIsGroupAdmin(false)
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Ошибка')
@@ -61,6 +64,17 @@ export function AdminCreateUserPage() {
       <h1 className="groups-page__title">Новый игрок</h1>
 
       <form className="login-page__form" onSubmit={handleSubmit}>
+        <label className="neo-field">
+          <span className="neo-label">Амплуа</span>
+          <select
+            className="neo-input"
+            value={position}
+            onChange={(e) => setPosition(e.target.value as 'player' | 'goalie')}
+          >
+            <option value="player">Полевой</option>
+            <option value="goalie">Вратарь</option>
+          </select>
+        </label>
         <Input
           id="phone"
           type="tel"

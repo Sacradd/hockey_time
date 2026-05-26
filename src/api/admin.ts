@@ -7,6 +7,7 @@ export function createUser(
   data: {
     phone: string
     password: string
+    position?: 'player' | 'goalie'
     is_group_admin?: boolean
   }
 ) {
@@ -21,6 +22,7 @@ export function createUser(
     body: JSON.stringify({
       phone: data.phone,
       password: data.password,
+      position: data.position ?? 'player',
       is_group_admin: data.is_group_admin ?? false,
     }),
   })
