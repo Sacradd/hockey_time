@@ -15,6 +15,7 @@
     "local:migrate": "powershell -ExecutionPolicy Bypass -File scripts/local-migrate.ps1",
     "local:super-dev": "powershell -ExecutionPolicy Bypass -File scripts/local-dev-super.ps1",
     "icons": "node scripts/generate-icons.mjs",
+    "generate-vapid": "node scripts/generate-vapid.mjs",
     "teams:slice": "node scripts/slice-khl-icons.mjs",
     "teams:import": "node scripts/import-khl-debug.mjs",
     "build": "npm run icons && tsc -b && vite build",

@@ -136,7 +136,7 @@ function push_notify_game_payment(PDO $pdo, int $gameId, array $game, array $vie
         $userIds,
         'Требование об оплате',
         'Подтвердите оплату: ' . $gameLabel,
-        '/games/' . $gameId
+        '/groups/' . $gameId
     );
 
     $result['payable_count'] = $stats['payable_count'];

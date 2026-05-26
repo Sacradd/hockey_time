@@ -18,7 +18,7 @@ return [
     /** Подпись токенов входа (локально можно local-dev-secret) */
     'token_secret' => 'замените-на-случайную-строку',
     /**
-     * Web Push (VAPID). Ключи: npm run generate-vapid или web-push generate-vapid-keys
+     * Web Push (VAPID). Ключи: npm.cmd run generate-vapid (без сети — node scripts/generate-vapid.mjs)
      * subject — mailto: или https:// URL сайта
      */
     // 'vapid' => [

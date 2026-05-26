@@ -9,6 +9,7 @@ import {
 } from 'react'
 import { fetchMe } from '@/api/auth'
 import type { User } from '@/types/auth'
+import { subscribeToPush } from '@/lib/pushClient'
 
 const TOKEN_KEY = 'hockey_token'
 
@@ -64,6 +65,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       cancelled = true
     }
   }, [token, logout])
+
+  useEffect(() => {
+    if (!token || !user) return
+    subscribeToPush(token).catch(() => {
+      // игнорируем ошибки подписки на push
+    })
+  }, [token, user])
 
   const value = useMemo(
     () => ({ user, token, loading, setSession, updateUser, logout }),
