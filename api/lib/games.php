@@ -975,6 +975,35 @@ function db_sync_roster_to_game(PDO $pdo, int $rosterId, int $gameId): void
     }
 }
 
+/** Вратарь из группы → в игру (голос «буду», очередь вратарей по времени). */
+function db_add_roster_goalie_to_game(PDO $pdo, int $gameId, int $rosterId, array $game, int $userId): void
+{
+    if (db_roster_member_position($pdo, $rosterId, $userId) !== 'goalie') {
+        throw new InvalidArgumentException('Игрок не вратарь');
+    }
+
+    db_ensure_group_member($pdo, $userId, $gameId);
+    $goOption = (int) ($game['vote_go_option'] ?? 1);
+    db_ensure_field_go_vote($pdo, $gameId, $userId, $goOption);
+}
+
+/** Новый участник группы — во все неархивные игры этой группы. */
+function db_sync_roster_member_to_active_games(PDO $pdo, int $rosterId, int $userId): void
+{
+    db_ensure_archived_at_column($pdo);
+
+    $stmt = $pdo->prepare(
+        'SELECT id FROM day_groups WHERE roster_id = ? AND archived_at IS NULL'
+    );
+    $stmt->execute([$rosterId]);
+    $ins = $pdo->prepare(
+        'INSERT IGNORE INTO group_members (user_id, group_id, actual) VALUES (?, ?, 1)'
+    );
+    while ($row = $stmt->fetch()) {
+        $ins->execute([$userId, (int) $row['id']]);
+    }
+}
+
 function db_ensure_game_match_teams_table(PDO $pdo): void
 {
     if (db_table_exists($pdo, 'game_match_teams')) {

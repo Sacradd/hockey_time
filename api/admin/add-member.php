@@ -5,6 +5,7 @@ declare(strict_types=1);
 require dirname(__DIR__) . '/bootstrap.php';
 require dirname(__DIR__) . '/lib/auth.php';
 require dirname(__DIR__) . '/lib/db.php';
+require dirname(__DIR__) . '/lib/games.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     api_json_response(['ok' => false, 'error' => 'Метод POST'], 405);
@@ -62,6 +63,7 @@ try {
     }
 
     db_link_roster_member($pdo, $rosterId, $userId, $position);
+    db_sync_roster_member_to_active_games($pdo, $rosterId, $userId);
 
     api_json_response([
         'ok' => true,

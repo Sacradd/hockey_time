@@ -5,6 +5,7 @@ declare(strict_types=1);
 require dirname(__DIR__) . '/bootstrap.php';
 require dirname(__DIR__) . '/lib/auth.php';
 require dirname(__DIR__) . '/lib/db.php';
+require dirname(__DIR__) . '/lib/games.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     api_json_response(['ok' => false, 'error' => 'Метод POST'], 405);
@@ -24,6 +25,7 @@ try {
 
     $pdo = api_db();
     $gameId = db_upsert_game($pdo, $rosterId, $date, $title);
+    db_sync_roster_to_game($pdo, $rosterId, $gameId);
 
     $stmt = $pdo->prepare('SELECT id, roster_id, group_date, title FROM day_groups WHERE id = ?');
     $stmt->execute([$gameId]);
