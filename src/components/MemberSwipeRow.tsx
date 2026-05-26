@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from 'react'
 const DEFAULT_REVEAL_PX = 92
 const THRESHOLD = 44
 const BLOCK_THRESHOLD = 28
+/** Не перехватывать тап по ссылке, пока не начался горизонтальный свайп */
+const DRAG_START_PX = 10
 /** Задержка перед закрытием по тапу снаружи (Safari: ghost click после свайпа) */
 export const SWIPE_JOKE_CLOSE_GUARD_MS = 500
 const SWIPE_CLOSE_GUARD_MS = 350
@@ -41,7 +43,9 @@ export function MemberSwipeRow({
   const [offset, setOffset] = useState(0)
   const offsetRef = useRef(0)
   const startX = useRef(0)
+  const startY = useRef(0)
   const dragging = useRef(false)
+  const activePointerType = useRef<string | null>(null)
   const pointerIdRef = useRef<number | null>(null)
   const rootRef = useRef<HTMLLIElement>(null)
   const revealedAt = useRef(0)
@@ -120,29 +124,54 @@ export function MemberSwipeRow({
 
   function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
     if (disabled || e.button !== 0) return
+    if (e.pointerType === 'mouse') return
     pointerIdRef.current = e.pointerId
-    e.currentTarget.setPointerCapture(e.pointerId)
+    activePointerType.current = e.pointerType
     startX.current = e.clientX
-    dragging.current = true
+    startY.current = e.clientY
+    dragging.current = false
   }
 
   function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
-    if (!dragging.current || pointerIdRef.current !== e.pointerId) return
+    if (activePointerType.current === 'mouse') return
+    if (pointerIdRef.current !== e.pointerId) return
+
+    const dx = e.clientX - startX.current
+    const dy = e.clientY - startY.current
+
+    if (!dragging.current) {
+      if (Math.abs(dx) < DRAG_START_PX || Math.abs(dx) < Math.abs(dy)) {
+        return
+      }
+      dragging.current = true
+      e.currentTarget.setPointerCapture(e.pointerId)
+    }
+
     if (!e.currentTarget.hasPointerCapture(e.pointerId)) return
     updateDrag(e.clientX)
   }
 
   function onPointerUp(e: React.PointerEvent<HTMLDivElement>) {
+    if (activePointerType.current === 'mouse') return
     if (pointerIdRef.current !== e.pointerId) return
-    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+    if (dragging.current && e.currentTarget.hasPointerCapture(e.pointerId)) {
       e.currentTarget.releasePointerCapture(e.pointerId)
+      finishDrag()
     }
-    finishDrag()
+    dragging.current = false
+    pointerIdRef.current = null
+    activePointerType.current = null
   }
 
   function onPointerCancel(e: React.PointerEvent<HTMLDivElement>) {
+    if (activePointerType.current === 'mouse') return
     if (pointerIdRef.current !== e.pointerId) return
-    finishDrag()
+    if (dragging.current) {
+      finishDrag()
+    }
+    dragging.current = false
+    pointerIdRef.current = null
+    activePointerType.current = null
   }
 
   return (
