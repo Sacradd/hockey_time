@@ -109,9 +109,12 @@ return [
 
 **Подготовка на сервере:**
 
-```bash
-npx web-push generate-vapid-keys
+```powershell
+cd путь\к\go_hockey
+npm.cmd run generate-vapid
 ```
+
+(Без интернета: `node scripts/generate-vapid.mjs` — только встроенный Node, без npm-пакетов.)
 
 Публичный и приватный ключ — в `config.local.php` → `vapid`.  
 `subject` — `mailto:ваш@email` или `https://ваш-домен`.
