@@ -1,6 +1,6 @@
 .app-top-actions {
   position: absolute;
-  top: var(--space-lg);
+  top: var(--app-header-top);
   right: var(--space-lg);
   z-index: 10;
   display: flex;

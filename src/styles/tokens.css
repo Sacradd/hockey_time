@@ -88,4 +88,15 @@
   --app-max-width: 430px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+  /** Верхняя панель (профиль, назад, выход) — ниже статус-бара iPhone */
+  --app-header-top: calc(var(--safe-top) + var(--space-lg));
+  --app-header-height: 44px;
+  --app-header-band: calc(var(--app-header-top) + var(--app-header-height) + var(--space-sm));
+}
+
+/* PWA standalone: если inset=0, всё равно отступ под системную строку */
+@media (display-mode: standalone) {
+  :root {
+    --safe-top: max(env(safe-area-inset-top, 0px), 28px);
+  }
 }

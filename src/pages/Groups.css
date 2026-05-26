@@ -1409,7 +1409,7 @@ a.super-add-player-btn {
 }
 
 .app-shell--teams-form.app-shell--with-topbar {
-  padding-top: calc(var(--safe-top) + var(--space-lg) + 44px + var(--space-sm));
+  padding-top: var(--app-header-band);
 }
 
 .app-shell--teams-form > .groups-page--teams {

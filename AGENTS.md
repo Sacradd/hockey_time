@@ -22,7 +22,8 @@ PWA (сайт как приложение на телефоне) для **сво
 | С телефона (LAN) | Laragon **Start All**, затем `start_online.cmd` или `npm.cmd run dev:lan` → `http://IP-ПК:5173/` |
 | Локальный API + MySQL | Docker: см. [docs/LOCAL.md](docs/LOCAL.md) (`docker compose up -d`, `npm.cmd run local:install`) |
 | Сборка | `npm.cmd run build` → папка `dist/` |
-| Деплой | reg.ru: залить `dist/`; API PHP + MySQL на том же хостинге |
+| **Prod** | **https://hockey-all.ru** (reg.ru, HTTPS, PWA). БД MySQL: `uXXXXXX_hockey_all` |
+| Деплой | [docs/DEPLOY.md](docs/DEPLOY.md): `dist/*` в корень, `api/`, `deploy/htaccess.*`, `api/config.local.php` на сервере |
 
 **PWA на iPhone:** полноэкранный режим (без панелей Safari) только после **`npm.cmd run build`** + деплой на **HTTPS**. Dev-сервер (`dev` / `dev:lan`) — это закладка Safari, не приложение. Установка: Safari → «Поделиться» → «На экран "Домой"» → открывать с иконки.
 
@@ -107,9 +108,10 @@ docs/SPEC.md
 
 ## Известные ограничения / следующая сессия
 
-- **Деплой:** [docs/DEPLOY.md](docs/DEPLOY.md) — чеклист reg.ru + HTTPS.
+- **Prod:** hockey-all.ru — install пройден, вход с телефона ✅; после обновления фронта заливать `sw.js` + `assets/`.
 - **Push:** подписка в PWA + SW + рассылка при старте голосования (бэкенд оплаты частично готов).
 - **Инструкция пользователям:** [docs/USER-GUIDE.md](docs/USER-GUIDE.md) — текст готов; скриншоты в `docs/screenshots/` (нужны с телефона).
+- **PWA iPhone:** шапка с `--app-header-top` / safe-area; при залипании старого UI — обновить `dist` или переустановить на экран «Домой».
 
 ## Недавние доработки UI (этап 8+)
 
@@ -141,11 +143,10 @@ push_subscriptions — endpoint, keys, user_id
 ```
 (см. docs/ROSTERS-AND-VOTING.md; group_members/actual — этап миграции)
 
-## Что уточнять у пользователя перед бэкендом
+## Что уточнять у пользователя
 
-- Точный тариф reg.ru (PHP, MySQL, SSL).
-- Домен для HTTPS (нужен для PWA push).
-- Длительность голосования по умолчанию.
+- Длительность голосования по умолчанию (если менять с текущей логики).
+- Prod: секреты и `database/seed.json` только на сервере, не в git.
 
 ## Монетизация
 

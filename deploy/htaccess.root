@@ -1,0 +1,17 @@
+# Скопируйте в корень сайта hockey-all.ru как .htaccess
+# 1) Реальные файлы (api/*.php, assets/…) отдаются как есть
+# 2) Остальное — SPA (index.html)
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Существующий файл или папка — не трогать (в т.ч. api/migrate-rosters.php)
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # Всё, что не /api/ — React
+  RewriteCond %{REQUEST_URI} !^/api/ [NC]
+  RewriteRule ^ index.html [L]
+</IfModule>

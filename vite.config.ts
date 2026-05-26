@@ -9,6 +9,11 @@ export default defineConfig({
     VitePWA({
       devOptions: { enabled: false },
       registerType: 'autoUpdate',
+      workbox: {
+        navigateFallback: '/index.html',
+        // Иначе в браузере /api/*.php открывает SPA вместо PHP
+        navigateFallbackDenylist: [/^\/api\//],
+      },
       includeAssets: [
         'apple-touch-icon.png',
         'icons/ios/icon-180.png',

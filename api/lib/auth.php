@@ -106,13 +106,19 @@ function api_body_bool(array $body, string $key): bool
 function api_get_authorization_header(): string
 {
     $header = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
+    if ($header === '') {
+        $env = getenv('HTTP_AUTHORIZATION');
+        if (is_string($env) && $env !== '') {
+            $header = $env;
+        }
+    }
     if ($header === '' && function_exists('apache_request_headers')) {
         $headers = apache_request_headers();
         if (is_array($headers)) {
             $header = $headers['Authorization'] ?? $headers['authorization'] ?? '';
         }
     }
-    return $header;
+    return is_string($header) ? $header : '';
 }
 
 /** @return array<string, mixed> */

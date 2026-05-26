@@ -61,7 +61,7 @@ body {
 }
 
 .app-shell--with-topbar {
-  padding-top: calc(var(--safe-top) + var(--space-lg) + 44px + var(--space-sm));
+  padding-top: var(--app-header-band);
 }
 
 h1,

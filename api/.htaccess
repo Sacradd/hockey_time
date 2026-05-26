@@ -1,0 +1,10 @@
+# Не применять rewrite родительского .htaccess к PHP в /api/
+
+<IfModule mod_rewrite.c>
+  RewriteEngine Off
+</IfModule>
+
+# reg.ru / Apache: без этого PHP не видит Bearer-токен → me.php всегда 401
+<IfModule mod_setenvif.c>
+  SetEnvIf Authorization "(.+)" HTTP_AUTHORIZATION=$1
+</IfModule>

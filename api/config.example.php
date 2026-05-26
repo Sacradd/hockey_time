@@ -1,14 +1,15 @@
 <?php
 /**
  * Скопируйте в config.local.php и заполните данными из панели reg.ru (MySQL).
+ * Prod (hockey-all.ru): удобный шаблон — config.local.hockey-all.php
  * config.local.php в git не попадает.
  */
 return [
     'db' => [
         'host' => 'localhost',
         'port' => 3306,
-        'name' => 'u123456_hockey',
-        'user' => 'u123456_hockey',
+        'name' => 'u123456_hockey_all',
+        'user' => 'u123456_hockey_all',
         'pass' => 'ВАШ_ПАРОЛЬ_MYSQL',
         'charset' => 'utf8mb4',
     ],

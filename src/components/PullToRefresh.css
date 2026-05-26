@@ -69,5 +69,5 @@
 }
 
 .app-shell--with-topbar .ptr-indicator {
-  top: calc(var(--safe-top, 0px) + var(--space-lg) + 44px);
+  top: calc(var(--app-header-band) - var(--space-sm));
 }

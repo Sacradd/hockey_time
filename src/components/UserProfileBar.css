@@ -1,6 +1,6 @@
 .user-profile-bar {
   position: absolute;
-  top: var(--space-lg);
+  top: var(--app-header-top);
   left: var(--space-lg);
   z-index: 10;
   display: flex;

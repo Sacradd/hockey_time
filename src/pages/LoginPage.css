@@ -6,7 +6,7 @@
   flex: 1;
   min-height: 100%;
   gap: var(--space-lg);
-  padding: var(--space-xl) 0;
+  padding: calc(var(--safe-top) + var(--space-xl)) var(--space-md) var(--space-xl);
   width: 100%;
   max-width: 100%;
   overflow-x: hidden;
