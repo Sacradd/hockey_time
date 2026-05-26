@@ -15,13 +15,22 @@ try {
     $userId = (int) $viewer['id'];
     $pdo = api_db();
 
-    $pdo->prepare(
-        'UPDATE day_groups dg
-         INNER JOIN roster_members rm ON rm.roster_id = dg.roster_id AND rm.user_id = ?
-         SET dg.vote_active = 0
-         WHERE dg.vote_active = 1
-           AND dg.vote_ends_at IS NOT NULL AND dg.vote_ends_at <= NOW()'
-    )->execute([$userId]);
+    if (api_is_super($viewer)) {
+        $pdo->exec(
+            'UPDATE day_groups
+             SET vote_active = 0
+             WHERE vote_active = 1
+               AND vote_ends_at IS NOT NULL AND vote_ends_at <= NOW()'
+        );
+    } else {
+        $pdo->prepare(
+            'UPDATE day_groups dg
+             INNER JOIN roster_members rm ON rm.roster_id = dg.roster_id AND rm.user_id = ?
+             SET dg.vote_active = 0
+             WHERE dg.vote_active = 1
+               AND dg.vote_ends_at IS NOT NULL AND dg.vote_ends_at <= NOW()'
+        )->execute([$userId]);
+    }
 
     if (api_is_super($viewer)) {
         $adminStmt = $pdo->prepare(
@@ -67,23 +76,41 @@ try {
     db_ensure_teams_published_column($pdo);
     db_ensure_archived_at_column($pdo);
 
-    $gamesStmt = $pdo->prepare(
-        'SELECT dg.id, dg.group_date, dg.title, dg.vote_active, dg.payment_active,
-                dg.teams_published, dg.vote_ends_at,
-                r.id AS roster_id, r.title AS roster_title, r.venue AS roster_venue
-         FROM day_groups dg
-         INNER JOIN rosters r ON r.id = dg.roster_id
-         INNER JOIN roster_members rm ON rm.roster_id = dg.roster_id AND rm.user_id = ?
-         WHERE dg.archived_at IS NULL
-           AND (
-             dg.group_date >= CURDATE()
-             OR dg.vote_active = 1
-             OR dg.payment_active = 1
-             OR dg.teams_published = 1
-           )
-         ORDER BY dg.group_date ASC, dg.id ASC'
-    );
-    $gamesStmt->execute([$userId]);
+    if (api_is_super($viewer)) {
+        $gamesStmt = $pdo->query(
+            'SELECT dg.id, dg.group_date, dg.title, dg.vote_active, dg.payment_active,
+                    dg.teams_published, dg.vote_ends_at,
+                    r.id AS roster_id, r.title AS roster_title, r.venue AS roster_venue
+             FROM day_groups dg
+             INNER JOIN rosters r ON r.id = dg.roster_id
+             WHERE dg.archived_at IS NULL
+               AND (
+                 dg.group_date >= CURDATE()
+                 OR dg.vote_active = 1
+                 OR dg.payment_active = 1
+                 OR dg.teams_published = 1
+               )
+             ORDER BY dg.group_date ASC, dg.id ASC'
+        );
+    } else {
+        $gamesStmt = $pdo->prepare(
+            'SELECT dg.id, dg.group_date, dg.title, dg.vote_active, dg.payment_active,
+                    dg.teams_published, dg.vote_ends_at,
+                    r.id AS roster_id, r.title AS roster_title, r.venue AS roster_venue
+             FROM day_groups dg
+             INNER JOIN rosters r ON r.id = dg.roster_id
+             INNER JOIN roster_members rm ON rm.roster_id = dg.roster_id AND rm.user_id = ?
+             WHERE dg.archived_at IS NULL
+               AND (
+                 dg.group_date >= CURDATE()
+                 OR dg.vote_active = 1
+                 OR dg.payment_active = 1
+                 OR dg.teams_published = 1
+               )
+             ORDER BY dg.group_date ASC, dg.id ASC'
+        );
+        $gamesStmt->execute([$userId]);
+    }
 
     $activeGames = [];
     while ($row = $gamesStmt->fetch()) {
