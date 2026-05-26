@@ -63,10 +63,9 @@ function findMyLineupStatus(
     list.some((m) => m.user_id === userId) ? label : null
 
   const settled =
-    inList(lineup.field_lineup, 'Вы в игре (полевой)') ??
-    inList(lineup.field_reserve, 'Вы в резерве (полевой)') ??
-    inList(lineup.goalie_lineup, 'Вы в игре (вратарь)') ??
-    inList(lineup.goalie_reserve, 'Вратари в игре уже набраны') ??
+    inList(lineup.field_lineup, 'Вы в игре') ??
+    inList(lineup.goalie_lineup, 'Вы в игре') ??
+    inList(lineup.field_reserve, 'Вы в резерве') ??
     inList(lineup.field_declined, 'Вы отметили, что не будете') ??
     inList(lineup.goalie_declined, 'Вы отметили, что не будете') ??
     null
@@ -82,7 +81,7 @@ function findMyLineupStatus(
 }
 
 function myGameStatusClass(status: string): string {
-  if (status === 'Вы в игре (вратарь)') {
+  if (status === 'Вы в игре') {
     return 'my-game-status--success'
   }
   if (status.startsWith('Вы в игре') || status.startsWith('Вы в резерве')) {
@@ -328,6 +327,12 @@ export function GroupPage() {
   const [editTime, setEditTime] = useState('')
   const [editWeekday, setEditWeekday] = useState('3')
 
+  const refreshRosterMembers = useCallback(async (rosterId: number) => {
+    if (!token) return
+    const rm = await fetchRosterMembers(token, rosterId)
+    setRosterMembers(rm.members)
+  }, [token])
+
   const refresh = useCallback(async () => {
     if (!token || !Number.isFinite(gameId) || gameId < 1) return
     const res = await fetchGameDetail(token, gameId)
@@ -337,10 +342,9 @@ export function GroupPage() {
     setLineup(res.lineup)
     setMatchTeams(parseMatchTeams(res.match_teams))
     if (res.game.can_manage) {
-      const rm = await fetchRosterMembers(token, res.game.roster_id)
-      setRosterMembers(rm.members)
+      await refreshRosterMembers(res.game.roster_id)
     }
-  }, [token, gameId])
+  }, [token, gameId, refreshRosterMembers])
 
   const load = useCallback(() => {
     if (!token || !Number.isFinite(gameId) || gameId < 1) return
@@ -359,10 +363,8 @@ export function GroupPage() {
 
   useEffect(() => {
     if (!token || !game?.roster_id || !game.can_manage) return
-    fetchRosterMembers(token, game.roster_id)
-      .then((res) => setRosterMembers(res.members))
-      .catch(() => setRosterMembers([]))
-  }, [token, game?.roster_id, game?.can_manage])
+    refreshRosterMembers(game.roster_id).catch(() => setRosterMembers([]))
+  }, [token, game?.roster_id, game?.can_manage, refreshRosterMembers])
 
   useEffect(() => {
     if (showAddToQueue && lineup && guestMemberPosition === 'player') {
@@ -377,7 +379,7 @@ export function GroupPage() {
     try {
       const res = await castVote(token, gameId, choice)
       setMyVote(res.vote)
-      load()
+      await refresh()
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Не удалось проголосовать')
     } finally {
@@ -548,6 +550,7 @@ export function GroupPage() {
       setError('Выберите игрока или гостя')
       return
     }
+
     await applyQueuePosition(userId, position)
     setAddUserId('')
     setShowAddToQueue(false)
@@ -741,6 +744,21 @@ export function GroupPage() {
   )
   const addablePlayers = rosterMembers.filter(
     (m) => m.position !== 'goalie' && !inFieldQueue.has(m.user_id)
+  )
+  const inGameMembers = useMemo(() => {
+    if (!lineup) return []
+    const field = [...lineup.field_lineup].sort(
+      (a, b) => (a.queue_order ?? 999) - (b.queue_order ?? 999)
+    )
+    return [...field, ...lineup.goalie_lineup]
+  }, [lineup])
+  const declinedMembers = useMemo(
+    () => (lineup ? [...lineup.field_declined, ...lineup.goalie_declined] : []),
+    [lineup]
+  )
+  const pendingMembers = useMemo(
+    () => (lineup ? [...lineup.field_pending, ...lineup.goalie_pending] : []),
+    [lineup]
   )
   const lineupAdminPropsBase = canManageLineup
     ? {
@@ -1150,20 +1168,13 @@ export function GroupPage() {
         onCancel={closeQueueEditDialog}
       />
 
-      {!loading && !teamsPublished && lineup && (
+      {!loading && !teamsPublished && lineup && !voteNotStarted && (
         <>
           <LineupSection
-            title="В игре · вратари"
-            members={lineup.goalie_lineup}
-            showCount={false}
-            showQueueAdmin={canManageLineup}
-            onRemove={canManageLineup ? (m) => setRemoveTarget(m) : undefined}
-          />
-          <LineupSection
-            title="В игре · полевые"
-            members={lineup.field_lineup}
+            title="В игре"
+            members={inGameMembers}
             countClass={fieldLineupCountClass(lineup.field_lineup.length)}
-            emptyHint={lineup.field_lineup.length === 0 ? 'Пока никого в основе' : undefined}
+            emptyHint={inGameMembers.length === 0 ? 'Пока никого в основе' : undefined}
             titleLeading={
               canManageLineup ? (
                 <InfoHint ariaLabel="Подсказка по управлению составом">
@@ -1183,10 +1194,18 @@ export function GroupPage() {
                   aria-expanded={showAddToQueue}
                   onClick={() => {
                     setShowAddToQueue((open) => {
-                      if (!open && lineup) {
-                        setAddPosition(String(nextFieldQueuePosition(lineup)))
+                      const next = !open
+                      if (next) {
+                        if (game?.roster_id) {
+                          void refreshRosterMembers(game.roster_id).catch(() => {
+                            setRosterMembers([])
+                          })
+                        }
+                        if (lineup) {
+                          setAddPosition(String(nextFieldQueuePosition(lineup)))
+                        }
                       }
-                      return !open
+                      return next
                     })
                   }}
                 >
@@ -1311,25 +1330,20 @@ export function GroupPage() {
             {...lineupAdminProps}
           />
           <LineupSection
-            title="Резерв · полевые"
+            title="Резерв"
             members={lineup.field_reserve}
             emptyHint="Резерв пуст"
             {...lineupAdminPropsNoPayment}
           />
           <LineupSection
             title="Не будут"
-            members={lineup.field_declined}
-            onRestore={canManageLineup ? (m) => setRestoreTarget(m) : undefined}
-          />
-          <LineupSection
-            title="Не будут · вратари"
-            members={lineup.goalie_declined}
+            members={declinedMembers}
             onRestore={canManageLineup ? (m) => setRestoreTarget(m) : undefined}
           />
           {!voteNotStarted && (
             <LineupSection
               title="Ещё не ответили"
-              members={[...lineup.field_pending, ...lineup.goalie_pending]}
+              members={pendingMembers}
               {...lineupAdminPropsNoPayment}
             />
           )}
