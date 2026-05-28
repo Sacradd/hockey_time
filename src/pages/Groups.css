@@ -815,6 +815,36 @@ a.super-add-player-btn {
   cursor: pointer;
 }
 
+.profile-push {
+  padding: var(--space-md) var(--space-lg);
+  margin-bottom: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.profile-push__hint {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.profile-push__btn {
+  width: 100%;
+}
+
+.profile-push__notice {
+  margin: 0;
+}
+
+.profile-push__notice--ok {
+  color: #4caf50;
+}
+
+.profile-push__notice--err {
+  color: var(--accent, #ff6b00);
+}
+
 .profile-page__home-btn {
   align-self: stretch;
   margin-bottom: var(--space-lg);

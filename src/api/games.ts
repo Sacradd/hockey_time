@@ -141,7 +141,11 @@ export function stopVote(token: string, gameId: number) {
 
 /** Включить требование об оплате (голосование не закрывается). */
 export function startPayment(token: string, gameId: number) {
-  return apiFetch<{ ok: boolean; game: GamePublic }>('/admin/start-payment.php', {
+  return apiFetch<{
+    ok: boolean
+    game: GamePublic
+    notify?: PaymentNotifyResult
+  }>('/admin/start-payment.php', {
     method: 'POST',
     token,
     body: JSON.stringify({ game_id: gameId }),
@@ -150,6 +154,7 @@ export function startPayment(token: string, gameId: number) {
 
 export type PaymentNotifyResult = {
   targets: number
+  subscribed_users?: number
   sent_users: number
   sent_subscriptions: number
   push_enabled: boolean
@@ -208,6 +213,15 @@ export function addGuestToQueue(
 /** Вернуть в «будут» из «не будут»; место в очереди по времени занесения. */
 export function markPlayerInLineup(token: string, gameId: number, userId: number) {
   return apiFetch<{ ok: boolean; lineup: GameLineup }>('/admin/mark-in-lineup.php', {
+    method: 'POST',
+    token,
+    body: JSON.stringify({ game_id: gameId, user_id: userId }),
+  })
+}
+
+/** Вратарь из группы — в игру (до 2 вратарей). */
+export function addRosterGoalieToGame(token: string, gameId: number, userId: number) {
+  return apiFetch<{ ok: boolean; lineup: GameLineup }>('/admin/add-goalie-to-game.php', {
     method: 'POST',
     token,
     body: JSON.stringify({ game_id: gameId, user_id: userId }),

@@ -35,6 +35,16 @@ try {
     $stmt->execute([$userId, $endpoint, $p256dh, $auth]);
 
     api_json_response(['ok' => true]);
+} catch (PDOException $e) {
+    $code = (string) $e->getCode();
+    $msg = strtolower($e->getMessage());
+    if ($code === '42S02' || str_contains($msg, 'push_subscriptions')) {
+        api_json_response([
+            'ok' => false,
+            'error' => 'На сервере нет таблицы push_subscriptions (выполните install/migrate)',
+        ], 500);
+    }
+    api_handle_exception($e);
 } catch (Throwable $e) {
     api_handle_exception($e);
 }

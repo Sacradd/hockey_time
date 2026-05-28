@@ -9,7 +9,7 @@ import {
 } from 'react'
 import { fetchMe } from '@/api/auth'
 import type { User } from '@/types/auth'
-import { subscribeToPush } from '@/lib/pushClient'
+import { subscribeToPushIfGranted } from '@/lib/pushClient'
 
 const TOKEN_KEY = 'hockey_token'
 
@@ -68,8 +68,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!token || !user) return
-    subscribeToPush(token).catch(() => {
-      // игнорируем ошибки подписки на push
+    subscribeToPushIfGranted(token).catch(() => {
+      // полная подписка — по кнопке в профиле (iPhone требует жест пользователя)
     })
   }, [token, user])
 

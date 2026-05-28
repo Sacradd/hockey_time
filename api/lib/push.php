@@ -28,12 +28,30 @@ function push_vapid_config(): ?array
 function push_is_enabled(): bool
 {
     return push_vapid_config() !== null
-        && function_exists('curl_init');
+        && function_exists('curl_init')
+        && function_exists('sodium_crypto_box_keypair');
+}
+
+/** Сколько из userIds имеют хотя бы одну запись в push_subscriptions. */
+function push_count_subscribed_users(PDO $pdo, array $userIds): int
+{
+    $userIds = array_values(array_unique(array_filter(array_map('intval', $userIds), static fn (int $id): bool => $id > 0)));
+    if ($userIds === []) {
+        return 0;
+    }
+
+    $placeholders = implode(',', array_fill(0, count($userIds), '?'));
+    $stmt = $pdo->prepare(
+        "SELECT COUNT(DISTINCT user_id) FROM push_subscriptions WHERE user_id IN ({$placeholders})"
+    );
+    $stmt->execute($userIds);
+
+    return (int) $stmt->fetchColumn();
 }
 
 /**
  * @param list<int> $userIds
- * @return array{targets: int, sent_users: int, sent_subscriptions: int, push_enabled: bool}
+ * @return array{targets: int, subscribed_users: int, sent_users: int, sent_subscriptions: int, push_enabled: bool}
  */
 function push_send_payment_reminders(
     PDO $pdo,
@@ -48,15 +66,19 @@ function push_send_payment_reminders(
     if ($targets === 0) {
         return [
             'targets' => 0,
+            'subscribed_users' => 0,
             'sent_users' => 0,
             'sent_subscriptions' => 0,
             'push_enabled' => push_is_enabled(),
         ];
     }
 
+    $subscribedUsers = push_count_subscribed_users($pdo, $userIds);
+
     if (!push_is_enabled()) {
         return [
             'targets' => $targets,
+            'subscribed_users' => $subscribedUsers,
             'sent_users' => 0,
             'sent_subscriptions' => 0,
             'push_enabled' => false,
@@ -92,6 +114,7 @@ function push_send_payment_reminders(
 
     return [
         'targets' => $targets,
+        'subscribed_users' => $subscribedUsers,
         'sent_users' => count($sentUsers),
         'sent_subscriptions' => $sentSubs,
         'push_enabled' => true,
@@ -118,6 +141,7 @@ function push_notify_game_payment(PDO $pdo, int $gameId, array $game, array $vie
     if ($stats['unpaid_count'] === 0) {
         return [
             'targets' => 0,
+            'subscribed_users' => 0,
             'sent_users' => 0,
             'sent_subscriptions' => 0,
             'push_enabled' => push_is_enabled(),

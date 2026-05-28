@@ -505,6 +505,7 @@ function payment_notify_admin_message(array $stats, array $notify): string
     $payable = (int) ($stats['payable_count'] ?? 0);
     $unpaid = (int) ($stats['unpaid_count'] ?? 0);
     $sent = (int) ($notify['sent_users'] ?? 0);
+    $subscribed = (int) ($notify['subscribed_users'] ?? 0);
     $pushEnabled = (bool) ($notify['push_enabled'] ?? false);
 
     if ($payable === 0) {
@@ -516,8 +517,23 @@ function payment_notify_admin_message(array $stats, array $notify): string
     }
 
     if ($pushEnabled) {
+        if ($subscribed === 0) {
+            return sprintf(
+                'Без оплаты: %d. Push не ушёл — игроки не подписаны. Пусть снова войдут в приложение (с иконки «Домой») и разрешат уведомления, либо профиль → «Включить уведомления»',
+                $unpaid
+            );
+        }
+
+        if ($sent === 0) {
+            return sprintf(
+                'Без оплаты: %d. Подписка есть у %d, но push не доставлен — проверьте на сервере PHP ext-sodium и VAPID',
+                $unpaid,
+                $subscribed
+            );
+        }
+
         return sprintf(
-            'Повторно уведомлены %d из %d (только без оплаты)',
+            'Push доставлен %d из %d (без оплаты в основе)',
             $sent,
             $unpaid
         );
@@ -952,6 +968,10 @@ function db_add_guest_to_queue(
     $goOption = (int) ($game['vote_go_option'] ?? 1);
 
     if ($memberPosition === 'goalie') {
+        $lineup = db_compute_lineup($pdo, $gameId, $rosterId, $game, $viewer);
+        if (count($lineup['goalie_lineup']) >= 2) {
+            throw new InvalidArgumentException('В игре уже два вратаря');
+        }
         db_ensure_field_go_vote($pdo, $gameId, $userId, $goOption);
 
         return;
@@ -976,10 +996,32 @@ function db_sync_roster_to_game(PDO $pdo, int $rosterId, int $gameId): void
 }
 
 /** Вратарь из группы → в игру (голос «буду», очередь вратарей по времени). */
-function db_add_roster_goalie_to_game(PDO $pdo, int $gameId, int $rosterId, array $game, int $userId): void
-{
+function db_add_roster_goalie_to_game(
+    PDO $pdo,
+    int $gameId,
+    int $rosterId,
+    array $game,
+    array $viewer,
+    int $userId
+): void {
     if (db_roster_member_position($pdo, $rosterId, $userId) !== 'goalie') {
         throw new InvalidArgumentException('Игрок не вратарь');
+    }
+
+    $lineup = db_compute_lineup($pdo, $gameId, $rosterId, $game, $viewer);
+    $inLineup = count($lineup['goalie_lineup']);
+    $alreadyIn = false;
+    foreach ($lineup['goalie_lineup'] as $g) {
+        if ((int) $g['user_id'] === $userId) {
+            $alreadyIn = true;
+            break;
+        }
+    }
+    if ($alreadyIn) {
+        throw new InvalidArgumentException('Вратарь уже в игре');
+    }
+    if ($inLineup >= 2) {
+        throw new InvalidArgumentException('В игре уже два вратаря');
     }
 
     db_ensure_group_member($pdo, $userId, $gameId);

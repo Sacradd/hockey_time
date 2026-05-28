@@ -1,11 +1,17 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { fetchProfileRosters, updateProfile } from '@/api/profile'
+import { fetchPushStatus } from '@/api/push'
 import { ApiError } from '@/api/http'
 import { TeamAvatar } from '@/components/TeamAvatar'
 import { TeamPicker } from '@/components/TeamPicker'
 import { Button } from '@/components/ui/Button'
 import { useAuth } from '@/context/AuthContext'
+import {
+  enablePushNotifications,
+  pushEnableResultMessage,
+  type PushEnableResult,
+} from '@/lib/pushClient'
 import { getKhlTeam } from '@/data/khlTeams'
 import { weekdayLabel } from '@/lib/labels'
 import type { ProfileRosterSummary } from '@/types/groups'
@@ -24,9 +30,30 @@ export function ProfilePage() {
   const [editTeam, setEditTeam] = useState('')
   const [editError, setEditError] = useState('')
   const [saving, setSaving] = useState(false)
+  const [pushBusy, setPushBusy] = useState(false)
+  const [pushSubscribed, setPushSubscribed] = useState(false)
+  const [pushNotice, setPushNotice] = useState('')
+  const [pushNoticeOk, setPushNoticeOk] = useState(false)
 
   const nick = user?.display_login ?? 'Игрок'
   const team = getKhlTeam(user?.favorite_team)
+
+  useEffect(() => {
+    if (!token) return
+    let cancelled = false
+    fetchPushStatus(token)
+      .then((res) => {
+        if (!cancelled && res.ok) {
+          setPushSubscribed(res.subscribed)
+        }
+      })
+      .catch(() => {
+        /* статус push не критичен */
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [token])
 
   useEffect(() => {
     if (!token) return
@@ -61,6 +88,29 @@ export function ProfilePage() {
   function cancelEdit() {
     setEditing(false)
     setEditError('')
+  }
+
+  async function handleEnablePush() {
+    if (!token || pushBusy) return
+    setPushBusy(true)
+    setPushNotice('')
+    setPushNoticeOk(false)
+    try {
+      const result: PushEnableResult = await enablePushNotifications(token)
+      const ok = result === 'subscribed'
+      setPushNoticeOk(ok)
+      setPushNotice(pushEnableResultMessage(result))
+      if (ok) {
+        setPushSubscribed(true)
+      } else {
+        const status = await fetchPushStatus(token).catch(() => null)
+        if (status?.ok) {
+          setPushSubscribed(status.subscribed)
+        }
+      }
+    } finally {
+      setPushBusy(false)
+    }
   }
 
   async function saveEdit() {
@@ -158,6 +208,34 @@ export function ProfilePage() {
           </div>
         )}
       </div>
+
+      <section className="profile-push neo-surface">
+        <p className="profile-push__hint groups-page__user">
+          Чтобы приходили напоминания об оплате и голосовании — включите уведомления. На iPhone
+          открывайте приложение <strong>с иконки «Домой»</strong>, не из закладки Safari.
+        </p>
+        <Button
+          type="button"
+          variant={pushSubscribed ? 'default' : 'accent'}
+          className="profile-push__btn"
+          disabled={pushBusy || !token}
+          onClick={() => void handleEnablePush()}
+        >
+          {pushBusy
+            ? 'Подключение…'
+            : pushSubscribed
+              ? 'Уведомления включены'
+              : 'Включить уведомления'}
+        </Button>
+        {pushNotice && (
+          <p
+            className={`profile-push__notice groups-page__user${pushNoticeOk ? ' profile-push__notice--ok' : ' profile-push__notice--err'}`}
+            role="status"
+          >
+            {pushNotice}
+          </p>
+        )}
+      </section>
 
       <Link to="/home" className="neo-btn neo-btn--accent profile-page__home-btn">
         На главную

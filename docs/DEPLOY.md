@@ -132,6 +132,33 @@ npm.cmd run generate-vapid
 ## 6. Обновление версии
 
 1. `git pull` на ПК → `npm.cmd run build`
-2. Залить новый `dist/` (можно только изменённые файлы)
-3. Залить изменённые `api/*.php` при изменении бэкенда
-4. При новых колонках БД — снова `migrate-rosters.php` или SQL из `database/schema.sql`
+2. Проверка: `node scripts/verify-dist.mjs` (в `index.html` все `/assets/…` есть на диске)
+3. Залить **всё содержимое** `dist/` в корень **одной выкладкой** (см. ниже — не только `index.html`)
+4. Залить изменённые `api/*.php` при изменении бэкенда
+5. При новых колонках БД — снова `migrate-rosters.php` или SQL из `database/schema.sql`
+
+### Белый / пустой экран после заливки
+
+**Причина почти всегда одна из двух:**
+
+1. **Разные сборки на сервере** — новый `index.html` ссылается на `assets/index-XXXX.js`, а на хостинге лежит старый `assets/` → в Network **404** на `.js`.
+2. **Service Worker** отдал старый `index.html` из кэша (даже когда на сервере уже новые файлы).
+
+**Проверка с ПК** (подставьте свой домен):
+
+- Откройте исходный код страницы → найдите `assets/index-….js`
+- В браузере: `https://домен/assets/index-….js` — должен быть **200**, не 404
+
+**Исправление на сервере:**
+
+1. Локально: `npm.cmd run build` → `node scripts/verify-dist.mjs`
+2. В файловый менеджер reg.ru: **всё** из `dist/` → корень `hockey-all.ru/`:
+   - `index.html`, `assets/` (вся папка), `sw.js`, `workbox-*.js`, `registerSW.js`, `manifest.webmanifest`, `icons/`, `push/sw.js`, …
+3. **Не заливайте** только `index.html` без новой папки `assets/`.
+
+**Исправление в браузере (обязательно после обновления):**
+
+- Chrome: F12 → **Application** → **Service Workers** → **Unregister** → Ctrl+Shift+R  
+- iPhone: снять иконку с «Домой», очистить данные сайта в Safari, снова «На экран Домой»
+
+`npm run dev` на хостинг **не заливается** — только `dist/` после `build`.

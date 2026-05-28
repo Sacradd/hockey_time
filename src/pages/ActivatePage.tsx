@@ -7,6 +7,7 @@ import { TeamPicker } from '@/components/TeamPicker'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { useAuth } from '@/context/AuthContext'
+import { tryEnablePushAfterLogin } from '@/lib/pushClient'
 import './LoginPage.css'
 
 export function ActivatePage() {
@@ -44,6 +45,7 @@ export function ActivatePage() {
       const res = await activate(token, newPassword, displayLogin, favoriteTeam)
       if (res.ok && res.token && res.user) {
         setSession(res.token, res.user)
+        await tryEnablePushAfterLogin(res.token)
         navigate('/home', { replace: true })
       } else {
         setError(res.error ?? 'Не удалось сохранить')

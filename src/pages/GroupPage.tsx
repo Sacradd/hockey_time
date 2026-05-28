@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import {
   ADD_QUEUE_GUEST,
   addGuestToQueue,
+  addRosterGoalieToGame,
   castVote,
   confirmPayment,
   archiveGame,
@@ -118,6 +119,7 @@ function LineupSection({
   countClass,
   showCount = true,
   showQueueAdmin = false,
+  hideQueueOrder = false,
   onRemove,
   onPositionClick,
   onRestore,
@@ -133,6 +135,8 @@ function LineupSection({
   countClass?: string
   showCount?: boolean
   showQueueAdmin?: boolean
+  /** Не показывать цифру очереди (вратари) */
+  hideQueueOrder?: boolean
   onRemove?: (member: LineupMember) => void
   onPositionClick?: (member: LineupMember) => void
   /** Свайп «В состав» для «не будут» */
@@ -185,7 +189,8 @@ function LineupSection({
           {members.map((m) => {
             const row = (
               <div className="neo-surface member-row member-row--lineup member-row--compact">
-                {m.queue_order != null &&
+                {!hideQueueOrder &&
+                  m.queue_order != null &&
                   (showQueueAdmin && onPositionClick ? (
                     <button
                       type="button"
@@ -551,6 +556,23 @@ export function GroupPage() {
       return
     }
 
+    const member = rosterMembers.find((m) => m.user_id === userId)
+    if (member?.position === 'goalie') {
+      setQueueBusy(true)
+      setError('')
+      try {
+        const res = await addRosterGoalieToGame(token, gameId, userId)
+        setLineup(res.lineup)
+        setAddUserId('')
+        setShowAddToQueue(false)
+      } catch (err) {
+        setError(err instanceof ApiError ? err.message : 'Не удалось добавить вратаря')
+      } finally {
+        setQueueBusy(false)
+      }
+      return
+    }
+
     await applyQueuePosition(userId, position)
     setAddUserId('')
     setShowAddToQueue(false)
@@ -595,6 +617,26 @@ export function GroupPage() {
     try {
       const res = await startPayment(token, gameId)
       setGame(res.game)
+      if (res.notify) {
+        const unpaid = res.notify.unpaid_count ?? 0
+        const sent = res.notify.sent_users ?? 0
+        if (!res.notify.push_enabled) {
+          setPaymentNotice('Оплата запущена. Push не настроен на сервере (VAPID).')
+        } else if (unpaid === 0) {
+          setPaymentNotice('Оплата запущена. Все в основе уже оплатили.')
+          setPaymentNoticeKind('success')
+        } else if (sent === 0) {
+          const sub = res.notify.subscribed_users ?? 0
+          setPaymentNotice(
+            sub === 0
+              ? `Оплата запущена. Без оплаты: ${unpaid}. Игрокам нужно разрешить уведомления при входе или в профиле.`
+              : `Оплата запущена. Без оплаты: ${unpaid}. Подписка есть, push не дошёл — проверьте сервер (sodium).`
+          )
+        } else {
+          setPaymentNotice(`Оплата запущена. Push доставлен ${sent} из ${unpaid}.`)
+          setPaymentNoticeKind('success')
+        }
+      }
       load()
     } catch (err) {
       setError(
@@ -742,16 +784,20 @@ export function GroupPage() {
       ? [...lineup.field_lineup, ...lineup.field_reserve].map((m) => m.user_id)
       : []
   )
-  const addablePlayers = rosterMembers.filter(
-    (m) => m.position !== 'goalie' && !inFieldQueue.has(m.user_id)
+  const inGoalieLineup = new Set(
+    lineup ? lineup.goalie_lineup.map((m) => m.user_id) : []
   )
-  const inGameMembers = useMemo(() => {
-    if (!lineup) return []
-    const field = [...lineup.field_lineup].sort(
-      (a, b) => (a.queue_order ?? 999) - (b.queue_order ?? 999)
-    )
-    return [...field, ...lineup.goalie_lineup]
-  }, [lineup])
+  const goalieSlotsFull = (lineup?.goalie_lineup.length ?? 0) >= 2
+  const addableMembers = rosterMembers.filter((m) => {
+    if (m.position === 'goalie') {
+      return !inGoalieLineup.has(m.user_id) && !goalieSlotsFull
+    }
+    return !inFieldQueue.has(m.user_id)
+  })
+  const selectedAddMember = addUserId
+    ? rosterMembers.find((m) => m.user_id === parseInt(addUserId, 10))
+    : undefined
+  const addingGoalie = selectedAddMember?.position === 'goalie'
   const declinedMembers = useMemo(
     () => (lineup ? [...lineup.field_declined, ...lineup.goalie_declined] : []),
     [lineup]
@@ -1168,13 +1214,21 @@ export function GroupPage() {
         onCancel={closeQueueEditDialog}
       />
 
-      {!loading && !teamsPublished && lineup && !voteNotStarted && (
+      {!loading && !teamsPublished && lineup && (
         <>
           <LineupSection
-            title="В игре"
-            members={inGameMembers}
+            title="В игре · вратари"
+            members={lineup.goalie_lineup}
+            showCount={false}
+            hideQueueOrder
+            showQueueAdmin={canManageLineup}
+            onRemove={canManageLineup ? (m) => setRemoveTarget(m) : undefined}
+          />
+          <LineupSection
+            title="В игре · полевые"
+            members={lineup.field_lineup}
             countClass={fieldLineupCountClass(lineup.field_lineup.length)}
-            emptyHint={inGameMembers.length === 0 ? 'Пока никого в основе' : undefined}
+            emptyHint={lineup.field_lineup.length === 0 ? 'Пока никого в основе' : undefined}
             titleLeading={
               canManageLineup ? (
                 <InfoHint ariaLabel="Подсказка по управлению составом">
@@ -1237,7 +1291,7 @@ export function GroupPage() {
                       required
                     >
                       <option value="">Выберите…</option>
-                      {addablePlayers.map((m) => (
+                      {addableMembers.map((m) => (
                         <option key={m.user_id} value={String(m.user_id)}>
                           {m.name}
                         </option>
@@ -1293,7 +1347,15 @@ export function GroupPage() {
                       </div>
                     </>
                   )}
-                  {addUserId !== ADD_QUEUE_GUEST || guestMemberPosition === 'player' ? (
+                  {addUserId === ADD_QUEUE_GUEST && guestMemberPosition === 'goalie' ? (
+                    <p className="groups-page__user lineup-queue-add__goalie-hint">
+                      Гость-вратарь встанет в очередь вратарей по времени добавления.
+                    </p>
+                  ) : addingGoalie ? (
+                    <p className="groups-page__user lineup-queue-add__goalie-hint">
+                      Вратарь из группы попадёт в игру (не больше двух вратарей).
+                    </p>
+                  ) : (
                     <Input
                       label="Позиция в очереди"
                       type="number"
@@ -1302,10 +1364,6 @@ export function GroupPage() {
                       onChange={(e) => setAddPosition(e.target.value)}
                       required
                     />
-                  ) : (
-                    <p className="groups-page__user lineup-queue-add__goalie-hint">
-                      Вратарь встанет в очередь вратарей по времени добавления.
-                    </p>
                   )}
                   <div className="lineup-queue-add__actions">
                     <Button
@@ -1315,7 +1373,7 @@ export function GroupPage() {
                         queueBusy ||
                         (addUserId === ADD_QUEUE_GUEST
                           ? !guestName.trim() || !!guestNameError
-                          : !addUserId || addablePlayers.length === 0)
+                          : !addUserId || addableMembers.length === 0)
                       }
                     >
                       Вставить
@@ -1330,7 +1388,7 @@ export function GroupPage() {
             {...lineupAdminProps}
           />
           <LineupSection
-            title="Резерв"
+            title="Резерв · полевые"
             members={lineup.field_reserve}
             emptyHint="Резерв пуст"
             {...lineupAdminPropsNoPayment}

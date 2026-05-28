@@ -13,5 +13,5 @@ alwaysApply: true
 - Этап **8** ✅: состав белые/чёрные (`GameTeamsPage`, `game_match_teams`); push — позже
 - PWA standalone на iPhone **только** после build + HTTPS; dev/LAN = Safari с панелями
 - Разработка **по этапам** | UI на русском | commit только по просьбе
-- **GroupPage:** один «В игре», оплата в `vote-admin` **над** списками; не дробить UI и не менять порядок без запроса
+- **GroupPage:** вратари/полевые отдельно, оплата в `vote-admin` **над** списками; не менять порядок блоков без запроса
 - **Деплой:** `npm.cmd run build` → `dist/` на хостинг (не `dev`)

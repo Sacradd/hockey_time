@@ -6,6 +6,7 @@ import { Emblem } from '@/components/Emblem'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { useAuth } from '@/context/AuthContext'
+import { tryEnablePushAfterLogin } from '@/lib/pushClient'
 import './LoginPage.css'
 
 export function LoginPage() {
@@ -28,6 +29,7 @@ export function LoginPage() {
         if (res.user.must_change_password) {
           navigate('/activate', { replace: true })
         } else {
+          await tryEnablePushAfterLogin(res.token)
           navigate('/home', { replace: true })
         }
       } else {
