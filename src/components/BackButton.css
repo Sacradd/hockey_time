@@ -1,19 +1,16 @@
-a.back-btn {
-  text-decoration: none;
-  color: var(--color-text);
-  box-sizing: border-box;
-}
-
 .back-btn {
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  box-sizing: border-box;
   min-height: 44px;
   padding: 0 1rem;
   border: 1px solid var(--color-accent-ring);
   border-radius: var(--radius-full);
   background: var(--btn-bg);
+  color: var(--color-text);
+  font: inherit;
   font-size: 0.875rem;
   font-weight: 600;
   line-height: 1;
@@ -27,6 +24,21 @@ a.back-btn {
     color 0.15s ease,
     border-color 0.15s ease;
   -webkit-tap-highlight-color: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  text-decoration: none;
+}
+
+a.back-btn,
+a.back-btn:hover,
+a.back-btn:focus,
+a.back-btn:visited {
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+button.back-btn {
+  color: var(--color-text);
 }
 
 .back-btn:hover {

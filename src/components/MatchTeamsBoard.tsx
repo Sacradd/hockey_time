@@ -34,9 +34,6 @@ function TeamBoardColumn({
                 {m.position === 'goalie' && (
                   <span className="game-teams-board__goalie"> вр.</span>
                 )}
-                {m.is_guest && (
-                  <span className="game-teams-board__guest"> гость</span>
-                )}
               </>
             )}
           </li>

@@ -22,14 +22,7 @@ export function TeamAssignRow({ member, assigned, onAssign }: Props) {
         onClick={() => onAssign('white')}
       />
       <div className="team-assign-row__main neo-surface">
-        <span className="team-assign-row__name">
-          {member.name}
-          {member.is_guest && (
-            <span className="status-pill status-pill--guest team-assign-row__guest">
-              Гость
-            </span>
-          )}
-        </span>
+        <span className="team-assign-row__name">{member.name}</span>
         <PositionPill position={member.position} />
       </div>
       <button

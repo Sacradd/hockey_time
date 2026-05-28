@@ -1,0 +1,8 @@
+.app-alert-dialog__actions {
+  justify-content: center;
+}
+
+.app-alert-dialog__actions .neo-btn.app-alert-dialog__btn {
+  flex: 1;
+  max-width: 160px;
+}

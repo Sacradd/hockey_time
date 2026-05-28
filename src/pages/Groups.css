@@ -1619,8 +1619,7 @@ a.super-add-player-btn {
   visibility: hidden;
 }
 
-.game-teams-board__goalie,
-.game-teams-board__guest {
+.game-teams-board__goalie {
   font-size: 0.75rem;
   opacity: 0.7;
 }

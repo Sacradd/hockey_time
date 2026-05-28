@@ -1104,6 +1104,74 @@ function db_fetch_game_match_teams(PDO $pdo, int $gameId): array
  * @param array<int|string, mixed> $assignments user_id => white|black
  * @return array<int, string>
  */
+function db_match_team_label(string $team): string
+{
+    return $team === 'white' ? 'Белые' : 'Черные';
+}
+
+/**
+ * @param array<int, string> $normalized user_id => white|black
+ */
+function db_validate_match_team_assignments(
+    PDO $pdo,
+    int $gameId,
+    int $rosterId,
+    array $game,
+    array $viewer,
+    array $normalized
+): void {
+    $lineup = db_compute_lineup($pdo, $gameId, $rosterId, $game, $viewer);
+    $positions = [];
+    foreach (['field_lineup', 'field_reserve', 'goalie_lineup', 'goalie_reserve'] as $key) {
+        foreach ($lineup[$key] as $m) {
+            $positions[(int) $m['user_id']] = (string) ($m['position'] ?? 'player');
+        }
+    }
+
+    $whiteField = 0;
+    $whiteGoalie = 0;
+    $blackField = 0;
+    $blackGoalie = 0;
+
+    foreach ($normalized as $userId => $team) {
+        $isGoalie = ($positions[$userId] ?? 'player') === 'goalie';
+        if ($team === 'white') {
+            if ($isGoalie) {
+                $whiteGoalie++;
+            } else {
+                $whiteField++;
+            }
+        } else {
+            if ($isGoalie) {
+                $blackGoalie++;
+            } else {
+                $blackField++;
+            }
+        }
+    }
+
+    if ($whiteField > 10) {
+        throw new InvalidArgumentException(
+            'В команде «' . db_match_team_label('white') . '» уже 10 человек. Добавьте игрока в другую команду.'
+        );
+    }
+    if ($blackField > 10) {
+        throw new InvalidArgumentException(
+            'В команде «' . db_match_team_label('black') . '» уже 10 человек. Добавьте игрока в другую команду.'
+        );
+    }
+    if ($whiteGoalie > 1) {
+        throw new InvalidArgumentException(
+            'В команде «' . db_match_team_label('white') . '» уже есть вратарь. Добавьте игрока в другую команду.'
+        );
+    }
+    if ($blackGoalie > 1) {
+        throw new InvalidArgumentException(
+            'В команде «' . db_match_team_label('black') . '» уже есть вратарь. Добавьте игрока в другую команду.'
+        );
+    }
+}
+
 function db_save_game_match_teams(
     PDO $pdo,
     int $gameId,
@@ -1127,6 +1195,8 @@ function db_save_game_match_teams(
         }
         $normalized[$userId] = $team;
     }
+
+    db_validate_match_team_assignments($pdo, $gameId, $rosterId, $game, $viewer, $normalized);
 
     $pdo->beginTransaction();
     try {

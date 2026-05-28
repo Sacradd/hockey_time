@@ -47,6 +47,8 @@ try {
         'match_teams' => $saved,
         'game' => api_game_public($game, $viewer, true),
     ]);
+} catch (InvalidArgumentException $e) {
+    api_json_response(['ok' => false, 'error' => $e->getMessage()], 400);
 } catch (Throwable $e) {
     api_handle_exception($e);
 }

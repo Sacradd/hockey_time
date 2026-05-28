@@ -41,6 +41,13 @@ export function parseMatchTeams(
 /** Слоты живого блока: 1 вратарь + 10 полевых. */
 export const TEAM_BOARD_SLOTS = 11
 
+export const MATCH_TEAM_MAX_FIELD = 10
+export const MATCH_TEAM_MAX_GOALIES = 1
+
+export type MatchTeamAssignResult =
+  | { ok: true }
+  | { ok: false; message: string }
+
 export function buildTeamBoardSlots(members: LineupMember[]): (LineupMember | null)[] {
   const sorted = [...members].sort((a, b) => {
     const ga = a.position === 'goalie' ? 0 : 1
@@ -65,7 +72,6 @@ function formatBoardSlotName(member: LineupMember | null): string {
   if (!member) return '—'
   let line = member.name
   if (member.position === 'goalie') line += ' (вр.)'
-  if (member.is_guest) line += ' (гость)'
   return line
 }
 
@@ -74,25 +80,51 @@ function formatBoardSlotLine(member: LineupMember | null, index: number): string
   return `${prefix} ${formatBoardSlotName(member)}`
 }
 
-/** Текст живого блока: две колонки (белые | чёрные), как на экране. */
+/** Можно ли назначить игрока в команду (лимит как на доске: 10 полевых + 1 вратарь). */
+export function validateMatchTeamAssign(
+  member: LineupMember,
+  team: MatchTeam,
+  members: LineupMember[],
+  teams: Record<number, MatchTeam>,
+): MatchTeamAssignResult {
+  const onTeam = members.filter(
+    (m) => teams[m.user_id] === team && m.user_id !== member.user_id,
+  )
+  const label = matchTeamLabel(team)
+
+  if (member.position === 'goalie') {
+    const goalies = onTeam.filter((m) => m.position === 'goalie').length
+    if (goalies >= MATCH_TEAM_MAX_GOALIES) {
+      return {
+        ok: false,
+        message: `В команде «${label}» уже есть вратарь. Добавьте игрока в другую команду.`,
+      }
+    }
+  } else {
+    const field = onTeam.filter((m) => m.position !== 'goalie').length
+    if (field >= MATCH_TEAM_MAX_FIELD) {
+      return {
+        ok: false,
+        message: `В команде «${label}» уже 10 человек. Добавьте игрока в другую команду.`,
+      }
+    }
+  }
+
+  return { ok: true }
+}
+
+/** Один блок команды для копирования в мессенджер (сверху вниз). */
+function formatTeamCopySection(team: MatchTeam, members: LineupMember[]): string {
+  const slots = buildTeamBoardSlots(members)
+  return [matchTeamLabel(team), ...slots.map((m, i) => formatBoardSlotLine(m, i))].join('\n')
+}
+
+/** Текст для буфера: белые, затем чёрные — без колонок (удобно на узком экране). */
 export function formatMatchTeamsCopyText(
   whiteMembers: LineupMember[],
   blackMembers: LineupMember[]
 ): string {
-  const whiteLabel = matchTeamLabel('white')
-  const blackLabel = matchTeamLabel('black')
-  const whiteSlots = buildTeamBoardSlots(whiteMembers)
-  const blackSlots = buildTeamBoardSlots(blackMembers)
-  const colGap = '   │   '
-
-  const leftLines = [whiteLabel, ...whiteSlots.map((m, i) => formatBoardSlotLine(m, i))]
-  const rightLines = [blackLabel, ...blackSlots.map((m, i) => formatBoardSlotLine(m, i))]
-  const leftWidth = Math.max(...leftLines.map((line) => line.length))
-
-  const pad = (text: string) =>
-    text.length >= leftWidth ? text : text + ' '.repeat(leftWidth - text.length)
-
-  return leftLines
-    .map((left, row) => `${pad(left)}${colGap}${rightLines[row] ?? ''}`)
-    .join('\n')
+  return [formatTeamCopySection('white', whiteMembers), formatTeamCopySection('black', blackMembers)].join(
+    '\n\n',
+  )
 }
